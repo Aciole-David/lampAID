@@ -25,6 +25,11 @@ elif ! command -v csvcut &> /dev/null; then
     echo -e "Error:\n\
     Obligatory dependency csvkit not found"
     exit 1
+    
+elif ! command -v mview &> /dev/null; then
+    echo -e "Error:\n\
+    Obligatory dependency mview not found"
+    exit 1
 fi
 
 lampAIDsplt() {
