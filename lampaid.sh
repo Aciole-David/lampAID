@@ -333,7 +333,7 @@ done
 
 else
     echo -e "Error:\n\
-    Mode parameter wrong"
+    Mode parameter wrong; should either 'search' or 'build'"
     exit 1
 
 fi
