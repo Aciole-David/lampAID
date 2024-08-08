@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<HTML>
+<div class="cursor">
+  <div class="vt"></div>
+  <div class="hl"></div>
+</div>
+<script>
+const cursorVT = document.querySelector('.vt')
+const cursorHL = document.querySelector('.hl')
+document.addEventListener('mousemove', e => {
+  cursorVT.setAttribute('style', `left: ${e.clientX}px;`)
+  cursorHL.setAttribute('style', `top: ${e.clientY}px;`)
+})
+</script>
+<HEAD>
+<META http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<STYLE TYPE="text/css">
+.flex-container {
+    position: sticky;top: 0px;border: 0px solid red; display: flex;}
+.flex-child {
+    border: .1px; background: lightgray; top: 0px; color: black; padding: 1px; margin: 0px; flex: 1;text-align:center;}  
+.cursor {
+    position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 1; pointer-events: none;}
+.vt {
+    position: absolute; top: 0; bottom: 0; width: 1px; background: cyan;}
+.hl {
+    position: absolute; height: 1px; left: 0; right: 0; background: cyan;}
+<!--
+TD {font-family:Fixed,Courier,monospace; background-color:black; color:white}
+SPAN.S94 {background-color:#90fe23;color:#000000} SPAN.T94 {color:#90fe23} /* find-a */
+SPAN.S95 {background-color:#fe5e2d;color:#FFFFFF} SPAN.T95 {color:#fe5e2d} /* find-b */
+SPAN.S96 {background-color:#2e3d2d;color:#FFFFFF} SPAN.T96 {color:#2e3d2d} /* find-c */
+SPAN.S97 {background-color:#00903b;color:#FFFFFF} SPAN.T97 {color:#00903b} /* find-d */
+SPAN.S98 {background-color:#004baa;color:#FFFFFF} SPAN.T98 {color:#004baa} /* find-e */
+SPAN.S99 {background-color:#864b00;color:#FFFFFF} SPAN.T99 {color:#864b00} /* find-f */
+SPAN.S100 {background-color:#3fa201;color:#FFFFFF} SPAN.T100 {color:#3fa201} /* find-g */
+SPAN.S101 {background-color:#10fe68;color:#000000} SPAN.T101 {color:#10fe68} /* find-h */
+SPAN.S102 {background-color:#b2063b;color:#FFFFFF} SPAN.T102 {color:#b2063b} /* find-i */
+SPAN.S103 {background-color:#04ced9;color:#000000} SPAN.T103 {color:#04ced9} /* find-j */
+SPAN.S104 {background-color:#4972fe;color:#FFFFFF} SPAN.T104 {color:#4972fe} /* find-k */
+SPAN.S105 {background-color:#c4a100;color:#FFFFFF} SPAN.T105 {color:#c4a100} /* find-l */
+SPAN.S106 {background-color:#2a84dd;color:#FFFFFF} SPAN.T106 {color:#2a84dd} /* find-m */
+SPAN.S107 {background-color:#a60ade;color:#FFFFFF} SPAN.T107 {color:#a60ade} /* find-n */
+SPAN.S108 {background-color:#fe61fe;color:#FFFFFF} SPAN.T108 {color:#fe61fe} /* find-o */
+SPAN.S109 {background-color:#f7e847;color:#000000} SPAN.T109 {color:#f7e847} /* find-p */
+SPAN.S110 {background-color:#fefeb3;color:#000000} SPAN.T110 {color:#fefeb3} /* find-q */
+SPAN.S111 {background-color:#4a007f;color:#FFFFFF} SPAN.T111 {color:#4a007f} /* find-r */
+SPAN.S112 {background-color:#e903a8;color:#FFFFFF} SPAN.T112 {color:#e903a8} /* find-s */
+SPAN.S113 {background-color:#5bfdfd;color:#000000} SPAN.T113 {color:#5bfdfd} /* find-t */
+SPAN.S243 {background-color:#e53319;color:#FFFFFF} SPAN.T243 {color:#e53319} /* seaview-red */
+SPAN.S244 {background-color:#197fe5;color:#FFFFFF} SPAN.T244 {color:#197fe5} /* seaview-blue */
+SPAN.S245 {background-color:#19cc19;color:#000000} SPAN.T245 {color:#19cc19} /* seaview-green */
+SPAN.S246 {background-color:#cc4ccc;color:#FFFFFF} SPAN.T246 {color:#cc4ccc} /* seaview-magenta */
+SPAN.S247 {background-color:#999999;color:#FFFFFF} SPAN.T247 {color:#999999} /* seaview-light-gray */
+SPAN.S248 {background-color:#666666;color:#FFFFFF} SPAN.T248 {color:#666666} /* seaview-dark-gray */
+SPAN.S249 {background-color:#ffff00;color:#000000} SPAN.T249 {color:#ffff00} /* seaview-yellow-print */
+-->
+</STYLE>
+<TITLE>LAMPaid</TITLE>
+</HEAD>
+<BODY style="margin:0px;background-color:black;color:white;">
+<TABLE style="border:0px;">
+<TR><TD><PRE class='my-pre'>
+<div class='flex-container'>
+<div class='flex-child'>

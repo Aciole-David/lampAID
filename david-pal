@@ -1,0 +1,72 @@
+#Palette:
+
+#color                     : #RGB
+color seaview-red          : #e53319 ##
+color seaview-blue         : #197fe5 ##
+color seaview-green        : #19cc19 ##
+color seaview-magenta      : #cc4ccc ##
+color seaview-light-gray   : #999999 ##
+color seaview-dark-gray    : #666666 ##
+color seaview-yellow-print : #ffff00 ##
+
+color find-a               : #90fe23
+color find-b               : #fe5e2d
+color find-c               : #2e3d2d
+color find-d               : #00903b
+color find-e               : #004baa
+color find-f               : #864b00
+color find-g               : #3fa201
+color find-h               : #10fe68
+color find-i               : #b2063b
+color find-j               : #04ced9
+color find-k               : #4972fe
+color find-l               : #c4a100
+color find-m               : #2a84dd
+color find-n               : #a60ade
+color find-o               : #fe61fe
+color find-p               : #f7e847
+color find-q               : #fefeb3
+color find-r               : #4a007f
+color find-s               : #e903a8
+color find-t               : #5bfdfd
+
+#Colormap listing - suitable for reloading.
+#Character matching is case-sensitive.
+
+[MYSEAVIEW_NUC]
+#MY VERSION OF SEAVIEW-derived colours for nucleotides
+#symbols =>  color                #comment
+.        =>  seaview-dark-gray    #wildcard/mismatch
+?        ->  seaview-light-gray   #unknown
+Aa       =>  seaview-red          #match
+Cc       =>  seaview-green        #match
+Gg       =>  seaview-yellow-print #match
+Tt       =>  seaview-blue         #match
+Uu       =>  seaview-magenta      #match
+
+[FIND]
+#colour successive 'find' pattern blocks
+#symbols =>  color                #comment
+Aa       =>  find-a               
+Bb       =>  find-b               
+Cc       =>  find-c               
+Dd       =>  find-d               
+Ee       =>  find-e               
+Ff       =>  find-f               
+Gg       =>  find-g               
+Hh       =>  find-h               
+Ii       =>  find-i               
+Jj       =>  find-j               
+Kk       =>  find-k               
+Ll       =>  find-l               
+Mm       =>  find-m               
+Nn       =>  find-n               
+Oo       =>  find-o               
+Pp       =>  find-p               
+Qq       =>  find-q               
+Rr       =>  find-r               
+Ss       =>  find-s               
+Tt       =>  find-t               
+
+
+# MView 1.67, Copyright (C) 1997-2020 Nigel P. Brown
