@@ -1,4 +1,4 @@
-#lampAID search mode
+#LampAID: simplified bash minipipeline to help lamp primersets design and selection
 
 if ! command -v awk &> /dev/null
 then
