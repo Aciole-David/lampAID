@@ -29,7 +29,7 @@ elif ! command -v csvcut &> /dev/null; then
 elif ! command -v mview &> /dev/null; then
     echo -e "Error:\n\
     Obligatory dependency mview not found"
-    exit 1
+    exit 1    
 fi
 
 lampAIDsplt() {
@@ -51,8 +51,8 @@ lampAIDsplt() {
     names=`awk 'NR > 1 {print $6}' splitout/split.tab | sed 's/\(.*\)-.*/\1/' | sort -u`
     
     for i in $names; do 
-    head -n 1 splitout/split.tab | \
-    sed 's/primer/ref\tprimer/g' > $i.split
+    #head -n 1 splitout/split.tab | \
+    #sed 's/primer/ref\tprimer/g' > $i.split
     grep -P "\t$i" splitout/split.tab | \
     awk -F'\t' 'BEGIN {OFS = FS} {gsub(/-set/,"\tset",$6);print}' >> splitout/$i.split
     
@@ -68,7 +68,7 @@ lampAIDsplt() {
 echo -e "\
 Error:\n\
 Positional parameter 1 is empty: You should pass the mode\n\
-syntax; lampAID [MODE] [OPTIONS]\n" ; \
+syntax; lampAID.sh [MODE] [OPTIONS]\n" ; \
 exit 1; }
 
 if [ $1 = search ]; then
