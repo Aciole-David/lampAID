@@ -82,7 +82,7 @@ if [ $1 = search ]; then
     
     if [ ! -e step1/primersets.fna ];then
     echo -e "Search mode - Error:\n\
-    merged-refs.fna file not found: Merged reference genomes are obligatory\n\
+    primersets.fna file not found: Merged reference genomes are obligatory\n\
     syntax; lampAID [MODE] [OPTIONS]\n"
     exit 1
     fi
