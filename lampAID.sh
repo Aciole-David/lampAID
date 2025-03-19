@@ -1,5 +1,8 @@
 #LampAID: simplified bash minipipeline to help lamp primersets design and selection
 
+davidml=`which david-ml`
+davidpal=`which david-pal`
+
 if ! command -v awk &> /dev/null
 then
     echo -e "Error:\n\
@@ -296,7 +299,7 @@ elif [ $1 = build ]; then
     -in fasta -sort cov:pid -minident 30 -bold -css on -gap " " -html head \
     -pagecolor "black" -textcolor "white" -alncolor "black" -labcolor \
     "white" -symcolor "darkgray" -coloring mismatch -colormap myseaview_nuc \
-    -colorfile david-pal> LampAid/$npt.html
+    -colorfile $davidpal> LampAid/$npt.html
     
     
     sed -e '1,269d' LampAid/$npt.html -i
@@ -306,7 +309,7 @@ elif [ $1 = build ]; then
     grep -v "<SMALL>" LampAid/$npt.html > $i-tmp/tmp && mv $i-tmp/tmp LampAid/$npt.html
 
     #
-    cat david-ml LampAid/$npt.html > $i-tmp/tmp && mv $i-tmp/tmp LampAid/$npt.html
+    cat $davidml LampAid/$npt.html > $i-tmp/tmp && mv $i-tmp/tmp LampAid/$npt.html
 
     sed -z "s#>\n@  #>   #" LampAid/$npt.html -i
 
