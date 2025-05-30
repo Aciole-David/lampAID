@@ -1,7 +1,16 @@
+#!/bin/bash
+
 #LampAID: simplified bash minipipeline to help lamp primersets design and selection
+
+trap "echo ''; trap - SIGTERM && (kill -- -$$) & disown %" EXIT
 
 davidml=`which david-ml`
 davidpal=`which david-pal`
+
+nmmt=$2
+ncpus=$3
+
+
 
 if ! command -v awk &> /dev/null
 then
@@ -35,6 +44,21 @@ elif ! command -v mview &> /dev/null; then
     exit 1    
 fi
 
+spinner() {
+  local pid=$!
+  spin='-\|/'
+
+  i=0
+  while kill -0 $pid 2>/dev/null; do
+    i=$(((i + 1) % 4))
+    
+    printf "%c" "${spin:$i:1}"
+    printf "\b"
+    
+    sleep .1
+  done
+}
+
 lampAIDsplt() {
 
     echo "$(date) >>> Split"
@@ -42,28 +66,58 @@ lampAIDsplt() {
     mkdir splitout;
     fi
     
-    for file in step1/found.tab; do
-    awk '{print $1"\t"$0}' $file | \
+    awk '{print $1"\t"$0}' step1/found.tab | \
     sed 's/:/\t/1' | \
     sed 's/:/\t/1' | \
     sed 's/:/\t/1' | \
     awk '{print $1"\t"$2"\t"$2":"$3"\t"$4"\t"$5"\t"$6"\t"$7"\t"$8"\t"$9"\t"$10"\t"$11}' | \
     sed 's/seqID\tseqID\tseqID:patternName\t/feat\tgenus\tspecies\tmisc\tchr\tprimer\t/g' \
-    > splitout/split.tab; done
+    > splitout/split.tab
     
     names=`awk 'NR > 1 {print $6}' splitout/split.tab | sed 's/\(.*\)-.*/\1/' | sort -u`
     
+    
+    
+    N=$(($ncpus - 2))
+    
+    varlen=$(wc -w <<< "$names")
+    
+    count=$varlen
+    
+    time (
     for i in $names; do 
+    
+    set +e
+    
+    ((k=k%N)); ((k++==0)) && wait
+    (
     #head -n 1 splitout/split.tab | \
     #sed 's/primer/ref\tprimer/g' > $i.split
     grep -P "\t$i" splitout/split.tab | \
     awk -F'\t' 'BEGIN {OFS = FS} {gsub(/-set/,"\tset",$6);print}' >> splitout/$i.split
     
     sed 's/\t\t\t//g' splitout/$i.split -i
-
     
-    echo " $i"; done
-    echo "Search mode outputs ready"
+    echo -ne "$i\r"
+    
+    echo -ne "Total "$count " of $varlen to process; " $(( (100-$count *100/$varlen) )) "% done\r"
+    #sleep 3
+    
+    
+    
+    ) &
+    
+    count=$(expr $count - 1)
+    
+    done
+    wait 
+    
+    printf "%100s" ""
+    echo " "
+    echo -e "Search mode outputs ready"
+    
+    )
+    
     
 }
 
@@ -124,21 +178,64 @@ exit 1; }
 
 
 
-nmmt=$2
-ncpus=$3
 
-    if [ ! -e merged-refs-ready.fna ];then
-    sed 's/ /:/g' step1/merged-refs.fna > step1/merged-refs-ready.fna;
+    if [ ! -e step1/merged-refs-ready.fna ];then
+	echo "$(date) >>> Labels"
+	echo " Preparing labels"
+    
+    echo " Punctuation characters found in merged-refs.fna:"
+    echo `grep [[:punct:]] step1/merged-refs.fna -o | sort -u`
+    echo " Punctuations (except '_' , '-' and '>') are replaced by underscore '_' "
+    echo ""
+    echo " Space characters are replaced by ':' "
+    
+    totall=`wc -l < step1/merged-refs.fna`
+    
+    cat step1/merged-refs.fna | pv -l -s $totall | \
+    sed \
+    -e 's#(#_#g' \
+    -e 's#)#_#g' \
+    -e 's#\\#_#g' \
+    -e 's#/#_#g' \
+    -e 's#, #_#g' \
+    -e 's/: /_/g' \
+    -e 's/ /:/g' > step1/merged-refs-ready.fna
+    
+    echo ""
+    #echo " Metagenome assemblies 'MAG:' prefix replaced by 'MAG_' "
+    #sed 's/MAG: /MAG_/g' step1/merged-refs-ready.fna -i
+    
+    
     fi
 
 echo "$(date) >>> Search"
+echo ""
+echo -e " Total `grep -c "^>" step1/primersets.fna` input primer sequences "
+echo -e " Total `grep -c "^>" step1/merged-refs.fna` input ref sequences"
 
-echo -e "Total `grep -c "^>" step1/primersets.fna` input primersets "
-echo -e "Total `grep -c "^>" step1/merged-refs.fna` input ref genomes "
+echo ""
 
-time \
-seqkit locate -i -m $nmmt -j $ncpus \
--f step1/primersets.fna step1/merged-refs-ready.fna > step1/found.tab
+
+echo ""
+#echo " Split merged-refs"
+#time seqkit split2 -p 10 -j 10 step1/merged-refs-ready.fna -O step1/tmp
+
+echo " Search primers"
+#time parallel -j 10 " seqkit locate -F -I -i -f step1/primersets.fna {1}" ::: step1/tmp/merged-refs-ready.*> step1/found.tab ; echo -ne '\007'
+
+
+
+totall=`wc -l < step1/merged-refs-ready.fna`
+
+
+#time ( head -n 99999 step1/merged-refs-ready.fna | seqkit locate -I -i -m $nmmt -j $ncpus \
+#-f step1/primersets.fna > step1/found.tab )
+
+time ( cat step1/merged-refs-ready.fna | pv -l -s $totall | seqkit locate -I -i -m $nmmt -j $ncpus \
+-f step1/primersets.fna > step1/found.tab ) & spinner
+
+
+
 echo ""
 
 lampAIDsplt
@@ -147,6 +244,8 @@ lampAIDsplt
 #lampAID build mode
 
 elif [ $1 = build ]; then
+
+
 
     if [ ! -e step1/found.tab ];then
     echo -e "\
@@ -160,79 +259,100 @@ elif [ $1 = build ]; then
     mkdir LampAid;
     fi
     
-    seqkit split step1/primersets.fna -i --id-regexp "^(.*[\w]+)\-" \
-    -O LampAid --by-id-prefix "" --quiet
     
-    mv LampAid/*.fna splitout
+    echo " $(date) >>> Build"
+    echo ""
     
-    echo "$(date) >>> Build"
+    time(
+    cat step1/primersets.fna | \
+    pv | \
+    seqkit -j $2 split step1/primersets.fna -i --id-regexp "^(.*[\w]+)\-" \
+    -O splitout --by-id-prefix "" --quiet 2>/dev/null
+    )
+    #mv LampAid/*.fna splitout
     
-    time for npt in `basename -a -s .split splitout/*.split`; do    
+        
+    N=$(($2 - 2))
     
+    npts=`basename -a -s .split splitout/*.split`
+    
+    varlen=$(wc -w <<< "$npts")
+    
+    count=$varlen
+    
+    echo ' Start building '
+    time (
+    for npt in $npts; do
+
+    ((k=k%N)); ((k++==0)) && wait
+    
+    (
+    
+
+    #sleep 5
     i=splitout/${npt}.split
-    j=splitout/${npt}.fna    
-    echo -e "\n input is $i"
+    j=splitout/${npt}.fna
 
     #
-    if [ ! -e ${i}-tmp ];then
-    mkdir ${i}-tmp;
-    fi
+    #if [ ! -e ${i}-tmp ];then
+    #mkdir ${i}-tmp;
+    #fi
 
     sort $i -k1,1 -k10,10n -k11,11n \
-    > $i-tmp/pivot
+    > $i-tmp-pivot
     
-    awk '{ print $0"\t"$10 - prev } { prev = $10 }' ${i}-tmp/pivot \
-    > $i-tmp/tmp && cp $i-tmp/tmp $i-tmp/pivot
+    awk '{ print $0"\t"$10 - prev } { prev = $10 }' ${i}-tmp-pivot \
+    > $i-tmp-tmp && cp $i-tmp-tmp $i-tmp-pivot
     
     
     awk -v mycounter=0 \
     'OFS="\t" {if (sqrt($13^2) < 200) $14=$1":"mycounter; else $14=$1":"++mycounter; print;}' \
-    $i-tmp/pivot \
-    > $i-tmp/tmp && mv $i-tmp/tmp $i-tmp/pivot
+    $i-tmp-pivot \
+    > $i-tmp-tmp && mv $i-tmp-tmp $i-tmp-pivot
     
     
-    sed -r 's/(\s+)?\S+//13' $i-tmp/pivot -i
-    sed -r 's/(\s+)?\S+//5' $i-tmp/pivot -i
-    sed '1s/feat:0/grouped/' $i-tmp/pivot -i
+    sed -r 's/(\s+)?\S+//13' $i-tmp-pivot -i
+    sed -r 's/(\s+)?\S+//5' $i-tmp-pivot -i
+    sed '1s/feat:0/grouped/' $i-tmp-pivot -i
     
-    awk '{print $0":"$3}' $i-tmp/pivot > $i-tmp/tmp && mv $i-tmp/tmp $i-tmp/pivot
+    awk '{print $0":"$3}' $i-tmp-pivot > $i-tmp-tmp && mv $i-tmp-tmp $i-tmp-pivot
     
-    datamash --header-in --filler=x crosstab 12,6 first 11 < $i-tmp/pivot | sed 's/"//g' | sed '1s/^/grouped/' \
-    > $i-tmp/tmp && mv $i-tmp/tmp $i-tmp/pivot
+    datamash --header-in --filler=x crosstab 12,6 first 11 < $i-tmp-pivot | sed 's/"//g' | sed '1s/^/grouped/' \
+    > $i-tmp-tmp  2>/dev/null && mv $i-tmp-tmp $i-tmp-pivot 
     
     
-    grep ">" $j | sed -z 's/\n/\t/g' | sed 's/>//g' > $i-tmp/head
-    echo "" >> $i-tmp/head
-    grep -v ">" $j | sed -z 's/\n/\t/g' | sed 's/>//g' > $i-tmp/seq
+    grep ">" $j | sed -z 's/\n/\t/g' | sed 's/>//g' > $i-tmp-head
+    echo "" >> $i-tmp-head
+    grep -v ">" $j | sed -z 's/\n/\t/g' | sed 's/>//g' > $i-tmp-seq
 
-    cat $i-tmp/head $i-tmp/seq > $i-tmp/actual
-    rm $i-tmp/seq
+    cat $i-tmp-head $i-tmp-seq > $i-tmp-actual
+    rm $i-tmp-seq
     
-    cat $i-tmp/head | sed 's/\t/\n/g' > $i-tmp/expec
-    head -n 1 $i-tmp/pivot | sed 's/\t/\n/g' > $i-tmp/found
-    rm $i-tmp/head
+    cat $i-tmp-head | sed 's/\t/\n/g' > $i-tmp-expec
+    head -n 1 $i-tmp-pivot | sed 's/\t/\n/g' > $i-tmp-found
+    rm $i-tmp-head
     
-    names=`grep -f $i-tmp/found $i-tmp/expec -v`
+    names=`grep -f $i-tmp-found $i-tmp-expec -v`
     
     for line in $names; do
     echo $names
     
     awk -v sets=$line 'NR==1{print $0"\t"sets}  NR>1{print $0"\t""x"}' \
-    $i-tmp/pivot > $i-tmp/tmp && mv $i-tmp/tmp $i-tmp/pivot; done
+    $i-tmp-pivot > $i-tmp-tmp && mv $i-tmp-tmp $i-tmp-pivot; done
     
-    rm $i-tmp/expec
-    rm $i-tmp/found
+    rm $i-tmp-expec
+    rm $i-tmp-found
     
-    sed -i '1s/-F3/_2-F3/' $i-tmp/pivot
-    sed -i '1s/-F2/_3-F2/' $i-tmp/pivot
-    sed -i '1s/-LF/_4-LF/' $i-tmp/pivot
-    sed -i '1s/-F1c/_5-F1c/' $i-tmp/pivot
-    sed -i '1s/-B1c/_6-B1c/' $i-tmp/pivot
-    sed -i '1s/-LB/_7-LB/' $i-tmp/pivot
-    sed -i '1s/-B2/_8-B2/' $i-tmp/pivot
-    sed -i '1s/-B3/_9-B3/' $i-tmp/pivot
+    sed -i '1s/-F3/_2-F3/' $i-tmp-pivot
+    sed -i '1s/-F2/_3-F2/' $i-tmp-pivot
+    sed -i '1s/-LF/_4-LF/' $i-tmp-pivot
+    sed -i '1s/-F1c/_5-F1c/' $i-tmp-pivot
+    sed -i '1s/-B1c/_6-B1c/' $i-tmp-pivot
+    sed -i '1s/-LB/_7-LB/' $i-tmp-pivot
+    sed -i '1s/-B2/_8-B2/' $i-tmp-pivot
+    sed -i '1s/-B3/_9-B3/' $i-tmp-pivot
     
-    reorder=`head -n 1 $i-tmp/pivot | \
+    reorder=`head -n 1 $i-tmp-pivot | \
     sed 's/\t/\n/g' | \
     sort | \
     sed -z 's/\n/,/g' | \
@@ -240,22 +360,22 @@ elif [ $1 = build ]; then
     sed 's/,//' | \
     rev`
     
-    csvcut -c $reorder $i-tmp/pivot -t | \
+    csvcut -c $reorder $i-tmp-pivot -t | \
     csvformat -T | \
-    sed -E '1s/_[0-9]//g' > $i-tmp/tmp && mv $i-tmp/tmp $i-tmp/pivot
+    sed -E '1s/_[0-9]//g' > $i-tmp-tmp 2>/dev/null && mv $i-tmp-tmp $i-tmp-pivot
     
     
-    sed -i '1s/-F3/_2-F3/' $i-tmp/actual
-    sed -i '1s/-F2/_3-F2/' $i-tmp/actual
-    sed -i '1s/-LF/_4-LF/' $i-tmp/actual
-    sed -i '1s/-F1c/_5-F1c/' $i-tmp/actual
-    sed -i '1s/-B1c/_6-B1c/' $i-tmp/actual
-    sed -i '1s/-LB/_7-LB/' $i-tmp/actual
-    sed -i '1s/-B2/_8-B2/' $i-tmp/actual
-    sed -i '1s/-B3/_9-B3/' $i-tmp/actual
+    sed -i '1s/-F3/_2-F3/' $i-tmp-actual
+    sed -i '1s/-F2/_3-F2/' $i-tmp-actual
+    sed -i '1s/-LF/_4-LF/' $i-tmp-actual
+    sed -i '1s/-F1c/_5-F1c/' $i-tmp-actual
+    sed -i '1s/-B1c/_6-B1c/' $i-tmp-actual
+    sed -i '1s/-LB/_7-LB/' $i-tmp-actual
+    sed -i '1s/-B2/_8-B2/' $i-tmp-actual
+    sed -i '1s/-B3/_9-B3/' $i-tmp-actual
     
     
-    reorder=`head -n 1 $i-tmp/actual | \
+    reorder=`head -n 1 $i-tmp-actual | \
     sed 's/\t/\n/g' | \
     sort | \
     sed -z 's/\n/,/g' | \
@@ -263,53 +383,62 @@ elif [ $1 = build ]; then
     sed 's/,//' | \
     rev`
 
-    csvcut -c $reorder $i-tmp/actual -t | \
+    csvcut -c $reorder $i-tmp-actual -t | \
     csvformat -T | \
     sed -E '1s/_[0-9]//g' |\
     sed '1s/\t/primerset\t/1' |\
-    sed '2s/\t/actual\t/1' > $i-tmp/tmp && mv $i-tmp/tmp $i-tmp/actual
+    sed '2s/\t/actual\t/1' > $i-tmp-tmp 2>/dev/null && mv $i-tmp-tmp $i-tmp-actual
     
-    cat $i-tmp/actual $i-tmp/pivot |\
-    sed '3d'> $i-tmp/tmp && mv $i-tmp/tmp $i-tmp/pivot
+    cat $i-tmp-actual $i-tmp-pivot |\
+    sed '3d'> $i-tmp-tmp && mv $i-tmp-tmp $i-tmp-pivot
     
-    ncols=`head -n 1 $i-tmp/pivot | awk '{print NF}'`
+    ncols=`head -n 1 $i-tmp-pivot | awk '{print NF}'`
 
     for col in $(seq 2 $ncols); do
     
-    lmax=`awk '{ print $'"$col"' }' $i-tmp/pivot |\
+    lmax=`awk '{ print $'"$col"' }' $i-tmp-pivot |\
     awk 'NR >1 {print length}' | sort -rnu | head -n 1`
 
     maxgap=`printf '%.0s-' $(seq 1 $lmax)`
 
-    awk -v maxgap=${maxgap} 'OFS="\t" {gsub("x",maxgap,$'"$col"');print}' $i-tmp/pivot \
-    > $i-tmp/tmp && mv $i-tmp/tmp $i-tmp/pivot; done
+    awk -v maxgap=${maxgap} 'OFS="\t" {gsub("x",maxgap,$'"$col"');print}' $i-tmp-pivot \
+    > $i-tmp-tmp && mv $i-tmp-tmp $i-tmp-pivot; done
     
-    cat $i-tmp/pivot | \
+    cat $i-tmp-pivot | \
     { sed -u 2q; sort -k2,2 -k3,3 -k4,4 -k5,5 -k6,6 -k7,7 -k8,8 -r; } \
-    > $i-tmp/tmp && mv $i-tmp/tmp $i-tmp/pivot
+    > $i-tmp-tmp && mv $i-tmp-tmp $i-tmp-pivot
     
     
-    sed '1d' $i-tmp/pivot | \
+    sed '1d' $i-tmp-pivot | \
     sed 's/^/>/g' | \
     sed 's/\t/\n/1' | \
-    sed 's/\t/-|-/g' > $i-tmp/fna
+    sed 's/\t/-|-/g' > $i-tmp-fna
     
+    (
+    cat $i-tmp-fna | \
+    #pv -l -s $(wc -l < $i-tmp-fna) | \
+    tee >(
     mview \
-    $i-tmp/fna \
+    -in fasta -sort cov:pid -gap "-" \
+    -out fasta > LampAid/$npt.fasta 2>/dev/null
+    ) | (
+    mview \
     -in fasta -sort cov:pid -minident 30 -bold -css on -gap " " -html head \
     -pagecolor "black" -textcolor "white" -alncolor "black" -labcolor \
     "white" -symcolor "darkgray" -coloring mismatch -colormap myseaview_nuc \
-    -colorfile $davidpal> LampAid/$npt.html
+    -colorfile $davidpal> LampAid/$npt.html 2>/dev/null & spinner
+    )
     
+    echo -ne "    $npt; Total "$count " of $varlen to process; " $(( (100-$count *100/$varlen) )) "% done\r"
     
     sed -e '1,269d' LampAid/$npt.html -i
 
     sed '0,/^/s//@/' LampAid/$npt.html -i
 
-    grep -v "<SMALL>" LampAid/$npt.html > $i-tmp/tmp && mv $i-tmp/tmp LampAid/$npt.html
+    grep -v "<SMALL>" LampAid/$npt.html > $i-tmp-tmp && mv $i-tmp-tmp LampAid/$npt.html
 
-    #
-    cat $davidml LampAid/$npt.html > $i-tmp/tmp && mv $i-tmp/tmp LampAid/$npt.html
+    
+    cat $davidml LampAid/$npt.html > $i-tmp-tmp && mv $i-tmp-tmp LampAid/$npt.html
 
     sed -z "s#>\n@  #>   #" LampAid/$npt.html -i
 
@@ -317,32 +446,43 @@ elif [ $1 = build ]; then
     
     
     spcnm=`echo $npt | sed 's/set.*//g'`
-    primernames=`head $i-tmp/actual -n 1|sed 's/primerset\t/\t/g'|sed -z 's/\t/\n/g'|sed 's/.*-set/set/g'|sed -z 's/\n/\t/g'|sed 's/B3\t/B3\n/g'`
+    primernames=`head $i-tmp-actual -n 1|sed 's/primerset\t/\t/g'|sed -z 's/\t/\n/g'|sed 's/.*-set/set/g'|sed -z 's/\n/\t/g'|sed 's/B3\t/B3\n/g'`
     
     sed "s#   cov    pid .*>#cov    pid	 $primernames#g" LampAid/$npt.html -i
-    rm $i-tmp/actual
+    rm $i-tmp-actual
 
     sed -z "s#\tset#</div>\n<div class=\'flex-child\'>set#g" LampAid/$npt.html -i
 
     sed -z "s#\n 1 actual#</div></div>\n 1 actual#" LampAid/$npt.html -i
     
     
-    sed 's/-|-/NN/g' $i-tmp/fna -i
-
-    mview \
-    $i-tmp/fna \
-    -in fasta -sort cov:pid -gap "-" \
-    -out fasta > LampAid/$npt.fasta
+    sed 's/-|-/NN/g' $i-tmp-fna -i
     
-    rm $i-tmp/ -r
+    )
     
+    
+    rm $i-tmp* -r 
+    
+        
+    ) &
+        
+    count=$(expr $count - 1)
     
 done
+
+wait
+
+    printf "%100s" ""
+    echo " "
+    echo -e " Build outputs ready"
+    
+    echo "$(date) >>> Finished"
+)
 
 
 else
     echo -e "Error:\n\
-    Mode parameter wrong; should either 'search' or 'build'"
+    Mode parameter wrong; should be either 'search' or 'build'"
     exit 1
 
 fi
