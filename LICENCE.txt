@@ -1,0 +1,18 @@
+Academic Use Only License
+
+Copyright (c) 2025 David Aciole Barbosa and EasyOmics Biotechnology
+
+Permission is hereby granted to use, copy, and distribute this software for academic, research, and educational purposes only, 
+provided that the above copyright notice and this permission notice appear in all copies.
+
+
+Permission is hereby granted to modify this software for academic, research, and educational purposes only, 
+and after authorization by the authors only, 
+provided that the above copyright notice and this permission notice appear in all copies.
+
+Commercial use of this software, including but not limited to use in proprietary products, for-profit services, 
+or internal use by commercial entities, is prohibited without a separate commercial license.
+
+To inquire about commercial licensing, please contact: aciole.d@gmail.com
+
+This software is provided "as is", without warranty of any kind.
