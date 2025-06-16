@@ -1,14 +1,24 @@
 #!/bin/bash
 
-#LampAID: simplified bash minipipeline to help lamp primersets design and selection
-
-trap "echo ''; trap - SIGTERM && (kill -- -$$) & disown %" EXIT
-
 davidml=`which david-ml`
 davidpal=`which david-pal`
 
 nmmt=$2
 ncpus=$3
+
+
+
+#LampAID: simplified bash minipipeline to help lamp primersets design and selection
+
+echo "$(date)"
+echo -e "
+   LampAID: simplified folderwise bash minipipeline to help lamp primersets design and selection
+   see the main repository at https://github.com/Aciole-David/lampAID
+   Paper is comming soon!\n"
+
+
+trap "echo ''; trap - SIGTERM && (kill -- -$$) & disown %" EXIT
+
 
 
 
@@ -98,10 +108,9 @@ lampAIDsplt() {
     
     sed 's/\t\t\t//g' splitout/$i.split -i
     
-    echo -ne "$i\r"
     
-    echo -ne "Total "$count " of $varlen to process; " $(( (100-$count *100/$varlen) )) "% done\r"
-    #sleep 3
+    echo -ne "Total "$cou	nt " of $varlen to process; " $(( (100-$count *100/$varlen) )) "% done\r"
+    echo -ne "$i\r"
     
     
     
@@ -125,22 +134,35 @@ lampAIDsplt() {
 echo -e "\
 Error:\n\
 Positional parameter 1 is empty: You should pass the mode\n\
-syntax; lampAID.sh [MODE] [OPTIONS]\n" ; \
+syntax: lampAID.sh [MODE] [OPTIONS]\n
+MODE: either 'search' or 'build', without quotes
+OPTIONS: [NUMBER OF MISMATCHES] followed by [NUMBER OF CPUs] 
+NUMBER OF MISMATCHES: Max mismacthes allowed in search, between 0 (exact match) and 3
+NUMBER OF CPUs: Max CPUs to run in parallel.
+Be careful to use a value smaller than the actual number of CPUs in your computer\n
+for example, use 'lampAID.sh search 3 10' to search allowing max 3 mismatches and using 10 cpus \n
+             or  'lampAID.sh build 10' to build outputs using 10 cpus " ; \
 exit 1; }
 
 if [ $1 = search ]; then
 
     if [ ! -e step1/merged-refs.fna ];then
     echo -e "Search mode - Error:\n\
-    merged-refs.fna file not found: Merged reference genomes are obligatory\n\
-    syntax; lampAID [MODE] [OPTIONS]\n"
+    merged-refs.fna file not found: Merged reference genomes are obligatory
+       Put merged-refs.fna and primersets.fna in a folder called 'step1' \n
+    syntax: lampAID.sh [MODE] [OPTIONS]\n
+    for example, use 'lampAID.sh search 3 10' to search allowing max 3 mismatches and using 10 cpus \n
+                 or  'lampAID.sh build 10' to build outputs using 10 cpus "
     exit 1
     fi
     
     if [ ! -e step1/primersets.fna ];then
     echo -e "Search mode - Error:\n\
-    primersets.fna file not found: Merged reference genomes are obligatory\n\
-    syntax; lampAID [MODE] [OPTIONS]\n"
+    primersets.fna file not found: Primer sets are obligatory
+       Put merged-refs.fna and primersets.fna in a folder called 'step1'\n
+    syntax: lampAID.sh [MODE] [OPTIONS]\n
+    for example, use 'lampAID.sh search 3 10' to search allowing max 3 mismatches and using 10 cpus \n
+                 or  'lampAID.sh build 10' to build outputs using 10 cpus "
     exit 1
     fi
     
@@ -149,30 +171,36 @@ if [ $1 = search ]; then
 echo -e "\
 Search mode - Error:\n\
 Positional parameter 2 is empty: You should pass the number of mismatches\n\
-syntax; lampAID [MODE] [PRIMERSETS FASTA] [MERGEDREFS FASTA] [NUMBER OF MISMATCHES] [NUMBER OF THREADS]\n" ; \
+syntax; lampAID.sh search [NUMBER OF MISMATCHES] [NUMBER OF CPUs]\n" ; \
 exit 1; }
 
 [[ -z "$3" ]] && { \
 echo -e "\
 Search mode - Error:\n\
-Positional parameter 3 is empty: You should pass the number of threads\n\
-syntax; lampAID [MODE] [PRIMERSETS FASTA] [MERGEDREFS FASTA] [NUMBER OF MISMATCHES] [NUMBER OF THREADS]\n" ; \
+Positional parameter 3 is empty: You should pass the number of cpus\n\
+syntax: lampAID.sh search [NUMBER OF MISMATCHES] [NUMBER OF CPUs]\n
+for example, use 'lampAID.sh search 3 10' to search allowing max 3 mismatches and using 10 cpus \n
+             or  'lampAID.sh build 10' to build outputs using 10 cpus " ; \
 exit 1; }
 
     if (( $2 < 0 || $2 > 3 )); then
     echo -e "Search mode - Error:\n\
-    Expected mismatches should be an integer within 0 - 3"
+    Expected mismatches should be an integer within 0 - 3\n
+    You typed '$2'"
+
     exit 1
     fi
     
     [[ ! "$2" =~ ^[0-9]+$ ]] && { \
     echo -e "Search mode - Error:\n\
-    Expected mismatches should be an integer within 0 - 3";
+    Expected mismatches should be an integer within 0 - 3\n
+    You typed '$2'";
     exit 1; }
 
     [[ ! "$3" =~ ^[0-9]+$ ]] && { \
     echo -e "Search mode - Error:\n\
-    Threads should be an integer";
+    CPUs should be an integer\n
+    You typed '$3'";
     exit 1; }
 
 
@@ -191,7 +219,7 @@ exit 1; }
     
     totall=`wc -l < step1/merged-refs.fna`
     
-    cat step1/merged-refs.fna | pv -l -s $totall | \
+    cat step1/merged-refs.fna | pv -N "   " -l -s $totall | \
     sed \
     -e 's#(#_#g' \
     -e 's#)#_#g' \
@@ -231,7 +259,7 @@ totall=`wc -l < step1/merged-refs-ready.fna`
 #time ( head -n 99999 step1/merged-refs-ready.fna | seqkit locate -I -i -m $nmmt -j $ncpus \
 #-f step1/primersets.fna > step1/found.tab )
 
-time ( cat step1/merged-refs-ready.fna | pv -l -s $totall | seqkit locate -I -i -m $nmmt -j $ncpus \
+time ( cat step1/merged-refs-ready.fna | pv -N "   " -l -s $totall | seqkit locate -I -i -m $nmmt -j $ncpus \
 -f step1/primersets.fna > step1/found.tab ) & spinner
 
 
@@ -241,17 +269,34 @@ echo ""
 lampAIDsplt
 
 
-#lampAID build mode
+#lampAID.sh build mode
 
 elif [ $1 = build ]; then
 
+[[ -z "$2" ]] && { \
+echo -e "\
+Build mode - Error:\n\
+Positional parameter 2 is empty: You should pass the number of cpus\n\
+syntax; lampAID.sh build [NUMBER OF CPUs]\n
+for example, use 'lampAID.sh build 10' to build outputs using 10 cpus " ; \
+exit 1; }
+
+
+    [[ ! "$2" =~ ^[0-9]+$ ]] && { \
+    echo -e "Build mode - Error:\n\
+    CPUs should be an integer
+      You typed '$2'\n
+    syntax: lampAID.sh build [NUMBER OF CPUs]\n
+    for example, use 'lampAID.sh build 10' to run using 10 cpus ";
+    exit 1; }
 
 
     if [ ! -e step1/found.tab ];then
     echo -e "\
     Build mode - Error:\n\
     found.tab file not found: You should run search mode first\n\
-    syntax; lampAID [MODE] [OPTIONS]\n"
+    syntax: lampAID.sh [MODE] [OPTIONS]\n
+    for example, use 'lampAID.sh search 3 10' to search allowing max 3 mismatches and using 10 cpus "
     exit 1
     fi
             
@@ -265,7 +310,7 @@ elif [ $1 = build ]; then
     
     time(
     cat step1/primersets.fna | \
-    pv | \
+    pv -N "   " | \
     seqkit -j $2 split step1/primersets.fna -i --id-regexp "^(.*[\w]+)\-" \
     -O splitout --by-id-prefix "" --quiet 2>/dev/null
     )
@@ -429,6 +474,8 @@ elif [ $1 = build ]; then
     -colorfile $davidpal> LampAid/$npt.html 2>/dev/null & spinner
     )
     
+    sed 's/-|-/NN/g' LampAid/$npt.fasta -i
+    
     echo -ne "    $npt; Total "$count " of $varlen to process; " $(( (100-$count *100/$varlen) )) "% done\r"
     
     sed -e '1,269d' LampAid/$npt.html -i
@@ -482,7 +529,16 @@ wait
 
 else
     echo -e "Error:\n\
-    Mode parameter wrong; should be either 'search' or 'build'"
+    syntax: lampAID.sh [MODE] [OPTIONS]\n
+    MODE: either 'search' or 'build', without quotes
+       You typed '$1'
+    
+    OPTIONS: [NUMBER OF MISMATCHES] followed by [NUMBER OF CPUs] 
+    NUMBER OF MISMATCHES: Max mismacthes allowed in search, between 0 (exact match) and 3
+    NUMBER OF CPUs: Max CPUs to run in parallel.
+    Be careful to use a value smaller than the actual number of CPUs in your computer\n
+    for example, use 'lampAID.sh search 3 10' to search allowing max 3 mismatches and using 10 cpus \n
+             or  'lampAID.sh build 10' to build outputs using 10 cpus "
     exit 1
 
 fi
