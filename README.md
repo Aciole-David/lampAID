@@ -44,6 +44,7 @@ This first step creates intermediary files with mathes found
 This second step builds fasta and html files of alignment-like results
       
 You can open html results in any web browser
+![output](https://github.com/user-attachments/assets/e19e88d8-edd2-4e2a-bbe7-6acc440ad553)
 
 
 
