@@ -1,5 +1,5 @@
 # lampAID
-Simplified folderwise bash pipeline to help lamp PCR primersets design and selection
+Simplified folderwise bash [mini]pipeline to help lamp PCR primersets design and selection
 
 
 ![image](https://github.com/user-attachments/assets/18c0c995-518b-4446-a7b3-0e01c9d0e7ca)
