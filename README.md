@@ -10,7 +10,8 @@ Simplified folderwise bash [mini]pipeline to help lamp PCR primersets design and
 
 
 ## 1. Install dependencies with conda/mamba:
-    mamba create -n lampaid bioconda::seqkit conda-forge::sed anaconda::gawk bioconda::mview conda-forge::pv bioconda::datamash conda-forge::csvkit
+    mamba create -n lampaid bioconda::seqkit conda-forge::sed anaconda::gawk \
+    bioconda::mview conda-forge::pv bioconda::datamash conda-forge::csvkit
 then activate the env
 
     mamba activate lampaid
