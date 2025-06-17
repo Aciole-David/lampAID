@@ -1,7 +1,7 @@
 #!/bin/bash
 
-davidml=`which david-ml`
-davidpal=`which david-pal`
+davidml="david-ml"
+davidpal="david-pal"
 
 nmmt=$2
 ncpus=$3
