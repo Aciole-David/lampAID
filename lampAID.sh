@@ -449,6 +449,11 @@ exit 1; }
     awk -v maxgap=${maxgap} 'OFS="\t" {gsub("x",maxgap,$'"$col"');print}' $i-tmp-pivot \
     > $i-tmp-tmp && mv $i-tmp-tmp $i-tmp-pivot; done
     
+    
+    #cat $i-tmp-pivot | \
+    #{ sed -u 2q; sort -k2,2 -k3,3 -k4,4 -k5,5 -k6,6 -k7,7 -k8,8 -r; } \
+    #> $i-final-pivot
+    
     cat $i-tmp-pivot | \
     { sed -u 2q; sort -k2,2 -k3,3 -k4,4 -k5,5 -k6,6 -k7,7 -k8,8 -r; } \
     > $i-tmp-tmp && mv $i-tmp-tmp $i-tmp-pivot
@@ -474,7 +479,7 @@ exit 1; }
     -colorfile $davidpal> LampAid/$npt.html 2>/dev/null & spinner
     )
     
-    sed 's/-|-/NN/g' LampAid/$npt.fasta -i
+    #sed 's/-|-/NN/g' LampAid/$npt.fasta -i
     
     echo -ne "    $npt; Total "$count " of $varlen to process; " $(( (100-$count *100/$varlen) )) "% done\r"
     
@@ -489,13 +494,14 @@ exit 1; }
 
     sed -z "s#>\n@  #>   #" LampAid/$npt.html -i
 
-    sed -z 's#</STRONG>\n#</STRONG>\n</div></div>#' LampAid/$npt.html -i
+    #sed -z 's#</STRONG>\n#</STRONG>\n</div></div>#' LampAid/$npt.html -i
     
     
     spcnm=`echo $npt | sed 's/set.*//g'`
-    primernames=`head $i-tmp-actual -n 1|sed 's/primerset\t/\t/g'|sed -z 's/\t/\n/g'|sed 's/.*-set/set/g'|sed -z 's/\n/\t/g'|sed 's/B3\t/B3\n/g'`
+    primernames=`head $i-tmp-actual -n 1|sed 's/primerset\t/\t/g'|sed -z 's/\t/\n/g'|sed 's/.*-set/set/g'|\
+    sed -z 's/\n/\t/g'`
     
-    sed "s#   cov    pid .*>#cov    pid	 $primernames#g" LampAid/$npt.html -i
+    sed "s#   cov    pid .*>#cov    pid$primernames#g" LampAid/$npt.html -i
     rm $i-tmp-actual
 
     sed -z "s#\tset#</div>\n<div class=\'flex-child\'>set#g" LampAid/$npt.html -i
@@ -503,7 +509,17 @@ exit 1; }
     sed -z "s#\n 1 actual#</div></div>\n 1 actual#" LampAid/$npt.html -i
     
     
-    sed 's/-|-/NN/g' $i-tmp-fna -i
+    sed 's#</div></div>#</div></div></PRE><PRE>#g' LampAid/$npt.html -i
+    
+    sed -z 's#<STRONG>   </STRONG>#<STRONG>   </STRONG></PRE><PRE>#g' LampAid/$npt.html -i
+    
+    sed 's/>set/>\tset/g' LampAid/$npt.html -i
+    
+    sed 's/B1/B1\t/g' LampAid/$npt.html | sed 's/B2/B2\t/g' | sed 's/B3\t/B3\t\n/g' |\
+    sed 's/F1/F1\t/g' | sed 's/F2/F2\t/g' | sed 's/F3/F3\t/g' |\
+    sed 's/LF/LF\t/g' | sed 's/LB/LB\t/g' > tmp && mv tmp LampAid/$npt.html
+    
+    #sed 's/-|-/NN/g' $i-tmp-fna -i
     
     )
     
@@ -518,7 +534,7 @@ exit 1; }
 done
 
 wait
-
+    #sed 's/-|-/NN/g' LampAid/*.fasta -i
     printf "%100s" ""
     echo " "
     echo -e " Build outputs ready"
