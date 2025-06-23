@@ -509,15 +509,18 @@ exit 1; }
     sed -z "s#\n 1 actual#</div></div>\n 1 actual#" LampAid/$npt.html -i
     
     
-    sed 's#</div></div>#</div></div></PRE><PRE>#g' LampAid/$npt.html -i
+    #sed 's#</div></div>#</div></div></PRE><PRE>#g' LampAid/$npt.html -i
     
     sed -z 's#<STRONG>   </STRONG>#<STRONG>   </STRONG></PRE><PRE>#g' LampAid/$npt.html -i
     
     sed 's/>set/>\tset/g' LampAid/$npt.html -i
     
-    sed 's/B1/B1\t/g' LampAid/$npt.html | sed 's/B2/B2\t/g' | sed 's/B3\t/B3\t\n/g' |\
+    sed 's/B1/B1\t/g' LampAid/$npt.html | sed 's/B2/B2\t/g' | sed 's#B3\t#B3\t</div></div></PRE><PRE>#g' |\
     sed 's/F1/F1\t/g' | sed 's/F2/F2\t/g' | sed 's/F3/F3\t/g' |\
     sed 's/LF/LF\t/g' | sed 's/LB/LB\t/g' > tmp && mv tmp LampAid/$npt.html
+    
+    
+    sed s'#\tc</div>#c</div>#'g LampAid/$npt.html -i
     
     #sed 's/-|-/NN/g' $i-tmp-fna -i
     
