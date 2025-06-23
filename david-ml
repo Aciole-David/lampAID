@@ -55,11 +55,22 @@ SPAN.S247 {background-color:#999999;color:#FFFFFF} SPAN.T247 {color:#999999} /* 
 SPAN.S248 {background-color:#666666;color:#FFFFFF} SPAN.T248 {color:#666666} /* seaview-dark-gray */
 SPAN.S249 {background-color:#ffff00;color:#000000} SPAN.T249 {color:#ffff00} /* seaview-yellow-print */
 -->
+
+
+PRE {line-height:1; padding: 1px; margin:2px}
+
+#PRE:hover{background-color:darkgrey}
+
+PRE:nth-child(odd) {
+  background-color: #575555;
+  color: #fff;
+}
+
 </STYLE>
 <TITLE>LAMPaid</TITLE>
 </HEAD>
 <BODY style="margin:0px;background-color:black;color:white;">
 <TABLE style="border:0px;">
-<TR><TD><PRE class='my-pre'>
+<TD><PRE>
 <div class='flex-container'>
 <div class='flex-child'>
