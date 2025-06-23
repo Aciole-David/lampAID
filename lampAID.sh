@@ -391,8 +391,8 @@ exit 1; }
     sed -i '1s/-F3/_2-F3/' $i-tmp-pivot
     sed -i '1s/-F2/_3-F2/' $i-tmp-pivot
     sed -i '1s/-LF/_4-LF/' $i-tmp-pivot
-    sed -i '1s/-F1c/_5-F1c/' $i-tmp-pivot
-    sed -i '1s/-B1c/_6-B1c/' $i-tmp-pivot
+    sed -i '1s/-F1/_5-F1/' $i-tmp-pivot
+    sed -i '1s/-B1/_6-B1/' $i-tmp-pivot
     sed -i '1s/-LB/_7-LB/' $i-tmp-pivot
     sed -i '1s/-B2/_8-B2/' $i-tmp-pivot
     sed -i '1s/-B3/_9-B3/' $i-tmp-pivot
@@ -413,8 +413,8 @@ exit 1; }
     sed -i '1s/-F3/_2-F3/' $i-tmp-actual
     sed -i '1s/-F2/_3-F2/' $i-tmp-actual
     sed -i '1s/-LF/_4-LF/' $i-tmp-actual
-    sed -i '1s/-F1c/_5-F1c/' $i-tmp-actual
-    sed -i '1s/-B1c/_6-B1c/' $i-tmp-actual
+    sed -i '1s/-F1/_5-F1/' $i-tmp-actual
+    sed -i '1s/-B1/_6-B1/' $i-tmp-actual
     sed -i '1s/-LB/_7-LB/' $i-tmp-actual
     sed -i '1s/-B2/_8-B2/' $i-tmp-actual
     sed -i '1s/-B3/_9-B3/' $i-tmp-actual
