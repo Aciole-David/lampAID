@@ -35,7 +35,7 @@ and lamp primers in a file named 'primersets.fna' to a folder named 'step1'
 ### example to search allowing 3 mismatches and 10 CPUs
 
     ./lampAID.sh search 3 10
-This first step creates intermediary files with mathes found
+This first step creates intermediary files with matches found
 
 ### Build results mode syntax
   ./lampAID.sh [build] [CPUs]
