@@ -1,13 +1,21 @@
 ## // get glapd ref target and pretty highlighted primers ####
 
-library(rentrez)    # NCBI entrez get sequence
-library(dplyr)      # R's armyknife
-library("ggplot2")  # Plotter BOSS
-library(patchwork)  # Plots, ASSEMBLE!
-library(stringr)    # String stuff
+library(rentrez)      # NCBI entrez get sequence
+library(dplyr)        # R's armyknife
+library(ggplot2)      # Plotter BOSS
+library(patchwork)    # Plots, ASSEMBLE!
+library(stringr)      # String stuff
+library(ggrepel)      # labels unmessed
+library(tibble)       # rules matrix like neo
+library(reshape2)     # melt like butter
+library(TmCalculator) # primers TM calc
+library(stringr)      # strings stuff
+library(spgs)         # dna strings stuff
+library(tidyr)        # data juggling BOSS
+
 
 # inform genome id used as ref
-id='JAAVTW010000004'
+id='NC_054688'
 # get glapd conv csv files from containing folder
 getname<-list.files(path = '..', pattern = paste0(id,".*csv"), recursive = T, include.dirs = T, full.names = T)
 # read glapd conv csv
@@ -20,8 +28,8 @@ tab<-read.delim2(file = getname)
 # 
 # tab$set
 
-#for (setnum in tab$set) {
-for (setnum in 'Set-9') {
+for (setnum in tab$set) {
+#for (setnum in 'Set-5') {
   
   print(paste(id,'; ',setnum))
   
@@ -74,6 +82,14 @@ for (setnum in 'Set-9') {
   
   rownames(tagplaces)<-gsub(x = rownames(tagplaces),pattern = '.stt',replacement = '')
   
+  sttfact<-(tab2[,grep('stt', names(tab2))])
+  sttfact<-as.data.frame(t(sttfact))
+  rownames(sttfact)<-gsub(x = rownames(sttfact),pattern = '.stt',replacement = '')
+  sttfact$names<-rownames(sttfact)
+  sttfact <- sttfact[order(sttfact$V1),]
+  sttfact<-factor(sttfact, levels = sttfact$names)
+  
+  
   #tagseqs<-as.vector(tab2[,grep('seq', names(tab2))])
   tagseqs<-t(tagplaces$seq)
   colnames(tagseqs)<-rownames(tagplaces)
@@ -83,27 +99,18 @@ for (setnum in 'Set-9') {
   tagcenter<-t(tagplaces$center)
   colnames(tagcenter)<-rownames(tagplaces)
   
-  tagcols<-c("#F8766D","#EA8331","#FF6A98","#39B600","#00BB4E","#00C1A3","#E76BF3","#00BAE0")
+  #tagcols<-c("#F8766D","#EA8331","#FF6A98","#39B600","#00BB4E","#00C1A3","#E76BF3","#00BAE0")
   
-  tagcols<-tagcols[1:ncol(tagcenter)]
+  
   
   apdf<-paste0(id,'-',setnum,'_prettyseq.pdf')
   apage<-paste0(id,'-',setnum,'_prettyseq')
-  
-  
-  
-  
   
   #gc()
   
   ## //TM CALC ####
   
   # Get TM from primers
-  
-  #install.packages('TmCalculator')
-  library(tibble)
-  library(reshape2)
-  library(TmCalculator)
   
   # concentration parameters
   # 1X Buffer Components
@@ -114,30 +121,29 @@ for (setnum in 'Set-9') {
   # 0.1% Tween® 20
   # pH 8.8@25°C
   
-  
+  trisconc=20; kconc=50; mgconc=2
   tmfun<-function(inputseq){
     Tm_GC(inputseq,
           ambiguous=F,
           #variant="Primer3Plus", #Empirical constants coefficient
-          Tris=20,
-          K=50,
-          Mg = 2,
+          Tris=trisconc,
+          K=kconc,
+          Mg = mgconc,
           mismatch=F, outlist = F)}
   
-  library(stringr)
-  library(dplyr)
   
-  library('spgs')
+  # tmtab<-as.data.frame((tagseqs))
+  # tmtab<-as.data.frame(t(tmtab))
+  # names(tmtab)<-'seqs'
+  # tmtab
+  # tmtab$stt<-tagplaces$stt
   
-  tmtab<-as.data.frame((tagseqs))
-  tmtab<-as.data.frame(t(tmtab))
-  names(tmtab)<-'seqs'
-  tmtab
+  tmtab<-tagplaces
   
-  tmtab$sense<-paste0('.....',tmtab$seqs)
+  tmtab$sense<-paste0('.....',tmtab$seq)
   tmtab$sense<-str_extract(sequence, tmtab$sense)
   
-  tmtab$asense<-toupper(reverseComplement(tmtab$seqs))
+  tmtab$asense<-toupper(reverseComplement(tmtab$seq))
   tmtab$asense<-paste0(tmtab$asense,'.....')
   
   
@@ -178,6 +184,9 @@ for (setnum in 'Set-9') {
     )|>
     rownames_to_column(var = 'names')
   
+  #tmtab <- tmtab[order(tmtab$stt),]
+  
+  
   tmtab<-tmtab|>
     mutate('tmadd_5'=round(unlist(lapply(tmtab$add_5, tmfun)), digits = 2))|>
     mutate('tmadd_4'=round(unlist(lapply(tmtab$add_4, tmfun)), digits = 2))|>
@@ -186,13 +195,28 @@ for (setnum in 'Set-9') {
     mutate('tmadd_1'=round(unlist(lapply(tmtab$add_1, tmfun)), digits = 2))|>
     mutate('tmadd_0'=round(unlist(lapply(tmtab$add_0, tmfun)), digits = 2))
   
+  if (tmtab$names[7]=='LF') {
+    tagcols<-c("#F8766D","#EA8331","#FF6A98","#39B600","#00BB4E","#00C1A3","#E76BF3","#00BAE0")
+  }
+  
+  if (tmtab$names[7]=='LB') {
+    tagcols<-c("#F8766D","#EA8331","#FF6A98","#39B600","#00BB4E","#00C1A3","#00BAE0","#E76BF3")
+  }
+  
+  tagcols2<-tagcols[1:ncol(tagcenter)]
+  
+  ypos<-c(.04 ,.02 ,.02 ,.04 ,.04 ,.02 ,.04 ,.02)
+  
+  if (sum(str_count(tmtab$names,'LF'))<1) {
+    ypos[4]<-0 }
+  if (sum(str_count(tmtab$names,'LB'))<1) {
+    ypos[6]<-0 }
   
   
-  library(tidyr)
+  #finalfun<-function() {
+  try(dev.off(),silent = T)
   
-  try(dev.off())
-  
-  pdf(file = apdf, width = nchar(sequence)/5.15, height = 20,family = 'mono', title = apage)
+  pdf(file = apdf, width = nchar(sequence)/5.15, height = 25,family = 'mono', title = apage)
   
   ggplot() +
     
@@ -203,49 +227,15 @@ for (setnum in 'Set-9') {
     geom_label(fill='grey',hjust = 0, vjust=0,label.size = 0,label.r = unit(0,'mm'),
                label.padding = unit(-4,'mm'),family = 'mono',show.legend = F,alpha = 0,
                aes(x = as.numeric(tagplaces$stt)+4.45,y = .2,
-                   label = as.list(paste('',tagseqs,''))),col=tagcols, cex = 7)+
+                   label = as.list(paste('',tagseqs,''))),col=tagcols2, cex = 7)+
     # PRIMERS NAMES
     geom_label(aes(label=rownames(tagplaces),
                    x=as.numeric(tagcenter)+4, y = .3),fontface='bold',family='mono',
-               show.legend = F, size=7, fill=tagcols)+
+               show.legend = F, size=7, fill=tagcols2)+
     # TARGET HEADER
     annotate(geom = 'text', x = atitleposition, y = .4, fontface='bold',label=atitle, size =8,
              family='mono')+
     
-    
-    scale_y_continuous(name = '', expand = c(0,0), limits = c(0,.5))+
-    scale_x_continuous(n.breaks = nchar(sequence), name = '', breaks = NULL)+
-    scale_fill_discrete()+
-    
-    theme_minimal()+
-    theme(plot.margin = unit(rep(0,4), 'cm'))->aa
-  
-  tmtab[,c(1,11:16)] %>%
-    gather(added, Tm, -names)|>
-    ggplot()+
-    geom_text(aes(x=added, y=Tm, label = Tm, color=Tm), size=10)+
-    facet_wrap(~names, scales = 'free')+
-    scale_color_gradient(low = 'blue', high = 'red')+
-    theme(text = element_text(size=30))-> bb
-  
-  
-  library(ggrepel)
-
-  pdf(file = 'a.pdf', width = nchar(sequence)/5.15, height = 20,family = 'mono', title = apage)
-  
-  if (nrow(tmtab) == 8) {
-    ypos<-c(.04 ,.02 ,.02 ,.04 ,.04 ,.02 ,.04 ,.02)
-  }
-  
-  if (nrow(tmtab) == 7) {
-    ypos<-ypos[-8]
-  }
-  
-  if (nrow(tmtab) == 6) {
-    ypos<-ypos[-c(7,8)]
-  }
-  
-  a1<-aa+
     geom_label(fill='grey',hjust = 0, vjust=0,label.size = 0,label.r = unit(0,'mm'),
                position = position_jitter(height = .04*0, seed = 1, width = 0),
                label.padding = unit(-4,'mm'),family = 'mono',show.legend = F,alpha = 0,
@@ -255,42 +245,76 @@ for (setnum in 'Set-9') {
                           as.numeric(tagplaces$stt)+5.45),
                  
                  y = ypos+.1,
-                 label = tmtab$add_5), cex = 7,col=tagcols)
+                 label = tmtab$add_5), cex = 7,col=tagcols)+
+    
+    
+    scale_y_continuous(name = '', expand = c(0,0), limits = c(0,.5))+
+    scale_x_continuous(n.breaks = nchar(sequence), name = '', breaks = NULL)+
+    scale_fill_discrete()+
+    
+    theme_minimal()+
+    theme(plot.margin = unit(rep(0,4), 'cm'))->aa
   
   
-  final<-(a1 / bb)+plot_layout(heights = c(1,2))
+  
+  
+  
+  # a1<-aa+
+  #   geom_label(fill='grey',hjust = 0, vjust=0,label.size = 0,label.r = unit(0,'mm'),
+  #              position = position_jitter(height = .04*0, seed = 1, width = 0),
+  #              label.padding = unit(-4,'mm'),family = 'mono',show.legend = F,alpha = 0,
+  #              aes(
+  #                x=ifelse(is.na(tmtab$asense),
+  #                         as.numeric(tagplaces$stt)+.45,
+  #                         as.numeric(tagplaces$stt)+5.45),
+  #                
+  #                y = ypos+.1,
+  #                label = tmtab$add_5), cex = 7,col=tagcols)
+  
+  
+  #tmtab$names<-factor(tmtab$names, levels = tmtab$names, labels = tmtab$names)
+  
+  #tmtab$names<-factor(tmtab$names, levels = tmtab$names, labels = tmtab$names)
+  
+  
+  
+  #tmtab$namepos<-factor(tmtab$names, levels = tmtab$names, labels = tmtab$names)
+  if (sum(str_count(tmtab$names,'LF'))<1) {
+    tmtab<-add_row(tmtab)
+    tmtab$names[nrow(tmtab)]='LF'
+  }
+  
+  if (sum(str_count(tmtab$names,'LB'))<1) {
+    tmtab<-add_row(tmtab)
+    tmtab$names[nrow(tmtab)]='LB'
+  }
+  
+  anames<-c('F3','B3','F2','B2','LF','LB','F1','B1')
+  
+  #anames<-tmtab$names[match(anames, tmtab$names, nomatch = F)]
+  #anames
+  
+  tmtab$namepos<-factor(tmtab$names, levels = anames, labels = anames)
+  
+  tmtab[,c(13:19)] %>%
+    gather(added, Tm, -namepos)|>
+    ggplot()+
+    geom_text(aes(x=added, y=Tm, label = Tm, color=Tm), size=10)+
+    facet_wrap(~namepos, scales = 'fixed', ncol = 2)+
+    scale_color_gradient(low = 'blue', high = 'red')+
+    theme(text = element_text(size=30))-> bb
+  
+  
+  final<<-(aa / bb)+plot_layout(heights = c(1,3))
   
   print(final)
-  dev.off()
+  #}
   
+  #finalfun()
+  gc()
+  Sys.sleep(.1)
+  gc()
 }
 
-
-
-
-pdf(file = 'a.pdf', width = nchar(sequence)/5.15, height = 20,family = 'mono', title = apage)
-
-ypos<-(1+bitwAnd(a = 1:nrow(tmtab), b = 1))/50
-
-a1<-aa+
-  geom_label(fill='grey',hjust = 0, vjust=0,label.size = 0,label.r = unit(0,'mm'),
-             position = position_jitter(height = .04*0, seed = 1, width = 0),
-             label.padding = unit(-4,'mm'),family = 'mono',show.legend = F,alpha = 0,
-             aes(
-               x=ifelse(is.na(tmtab$asense),
-                        as.numeric(tagplaces)+.45,
-                        as.numeric(tagplaces)+5.45),
-               
-               y = ypos+.1,
-               label = tmtab$add_5,col=tagcols), cex = 7)
-
-
-final<-(a1 / bb)+plot_layout(heights = c(1,2))
-
-print(final)
 dev.off()
-
-1:nrow(tmtab) %% 2
-
-
 
