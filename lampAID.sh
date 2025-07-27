@@ -109,7 +109,7 @@ lampAIDsplt() {
     sed 's/\t\t\t//g' splitout/$i.split -i
     
     
-    echo -ne "Total "$cou	nt " of $varlen to process; " $(( (100-$count *100/$varlen) )) "% done\r"
+    echo -ne "Total "$count " of $varlen to process; " $(( (100-$count *100/$varlen) )) "% done\r"
     echo -ne "$i\r"
     
     
@@ -342,12 +342,14 @@ exit 1; }
     #if [ ! -e ${i}-tmp ];then
     #mkdir ${i}-tmp;
     #fi
+    
+    
 
     sort $i -k1,1 -k10,10n -k11,11n \
     > $i-tmp-pivot
     
     awk '{ print $0"\t"$10 - prev } { prev = $10 }' ${i}-tmp-pivot \
-    > $i-tmp-tmp && cp $i-tmp-tmp $i-tmp-pivot
+    > $i-tmp-tmp && mv $i-tmp-tmp $i-tmp-pivot
     
     
     awk -v mycounter=0 \
@@ -360,7 +362,8 @@ exit 1; }
     sed -r 's/(\s+)?\S+//5' $i-tmp-pivot -i
     sed '1s/feat:0/grouped/' $i-tmp-pivot -i
     
-    awk '{print $0":"$3}' $i-tmp-pivot > $i-tmp-tmp && mv $i-tmp-tmp $i-tmp-pivot
+    awk '{print $0":"$3":"$4}' $i-tmp-pivot > $i-tmp-tmp && mv $i-tmp-tmp $i-tmp-pivot
+    
     
     datamash --header-in --filler=x crosstab 12,6 first 11 < $i-tmp-pivot | sed 's/"//g' | sed '1s/^/grouped/' \
     > $i-tmp-tmp  2>/dev/null && mv $i-tmp-tmp $i-tmp-pivot 
@@ -473,51 +476,63 @@ exit 1; }
     -out fasta > LampAid/$npt.fasta 2>/dev/null
     ) | (
     mview \
-    -in fasta -sort cov:pid -minident 30 -bold -css on -gap " " -html head \
+    -in fasta -sort cov:pid -minident 30 -bold -css on -gap " " -html data \
     -pagecolor "black" -textcolor "white" -alncolor "black" -labcolor \
-    "white" -symcolor "darkgray" -coloring mismatch -colormap myseaview_nuc \
+    "white" -symcolor "darkgray" -coloring mismatch -colormap david_seaview \
     -colorfile $davidpal> LampAid/$npt.html 2>/dev/null & spinner
     )
+    
+
     
     #sed 's/-|-/NN/g' LampAid/$npt.fasta -i
     
     echo -ne "    $npt; Total "$count " of $varlen to process; " $(( (100-$count *100/$varlen) )) "% done\r"
     
-    sed -e '1,269d' LampAid/$npt.html -i
+    #sed -e '1,269d' LampAid/$npt.html -i
+    sed -e '1,7d' LampAid/$npt.html -i
+    
 
+    
     sed '0,/^/s//@/' LampAid/$npt.html -i
-
+    
     grep -v "<SMALL>" LampAid/$npt.html > $i-tmp-tmp && mv $i-tmp-tmp LampAid/$npt.html
+    
 
     
     cat $davidml LampAid/$npt.html > $i-tmp-tmp && mv $i-tmp-tmp LampAid/$npt.html
 
     sed -z "s#>\n@  #>   #" LampAid/$npt.html -i
+    
 
+    
     #sed -z 's#</STRONG>\n#</STRONG>\n</div></div>#' LampAid/$npt.html -i
     
     
     spcnm=`echo $npt | sed 's/set.*//g'`
     primernames=`head $i-tmp-actual -n 1|sed 's/primerset\t/\t/g'|sed -z 's/\t/\n/g'|sed 's/.*-set/set/g'|\
-    sed -z 's/\n/\t/g'`
+    sed -z 's/\n/\t/g' | sed 's/-/@/g'`
     
     sed "s#   cov    pid .*>#cov    pid$primernames#g" LampAid/$npt.html -i
     rm $i-tmp-actual
+    
+
 
     sed -z "s#\tset#</div>\n<div class=\'flex-child\'>set#g" LampAid/$npt.html -i
+    
+
 
     sed -z "s#\n 1 actual#</div></div>\n 1 actual#" LampAid/$npt.html -i
     
-    
+
     #sed 's#</div></div>#</div></div></PRE><PRE>#g' LampAid/$npt.html -i
     
     sed -z 's#<STRONG>   </STRONG>#<STRONG>   </STRONG></PRE><PRE>#g' LampAid/$npt.html -i
-    
+
     sed 's/>set/>\tset/g' LampAid/$npt.html -i
-    
-    sed 's/B1/B1\t/g' LampAid/$npt.html | sed 's/B2/B2\t/g' | sed 's#B3\t#B3\t</div></div></PRE><PRE>#g' |\
-    sed 's/F1/F1\t/g' | sed 's/F2/F2\t/g' | sed 's/F3/F3\t/g' |\
-    sed 's/LF/LF\t/g' | sed 's/LB/LB\t/g' > tmp && mv tmp LampAid/$npt.html
+
+    sed 's/@B1/-B1\t/g' LampAid/$npt.html | sed 's/@B2/-B2\t/g' | sed 's#@B3\t#-B3\t</div></div></PRE><PRE>#g' |\
+    sed 's/@F1/-F1\t/g' | sed 's/@F2/-F2\t/g' | sed 's/@F3/-F3\t/g' |\
+    sed 's/@LF/-LF\t/g' | sed 's/@LB/-LB\t/g' > tmp && mv tmp LampAid/$npt.html
     
     
     sed s'#\tc</div>#c</div>#'g LampAid/$npt.html -i
@@ -537,7 +552,7 @@ exit 1; }
 done
 
 wait
-    #sed 's/-|-/NN/g' LampAid/*.fasta -i
+    sed 's/-|-/NN/g' LampAid/*.fasta -i
     printf "%100s" ""
     echo " "
     echo -e " Build outputs ready"
