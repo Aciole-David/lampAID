@@ -465,77 +465,57 @@ exit 1; }
     sed '1d' $i-tmp-pivot | \
     sed 's/^/>/g' | \
     sed 's/\t/\n/1' | \
-    sed 's/\t/-|-/g' > $i-tmp-fna
+    sed 's/\t/NN/g' > $i-tmp-fna
     
     (
-    cat $i-tmp-fna | \
+    #cat $i-tmp-fna | \
     #pv -l -s $(wc -l < $i-tmp-fna) | \
-    tee >(
-    mview \
-    -in fasta -sort cov:pid -gap "-" \
-    -out fasta > LampAid/$npt.fasta 2>/dev/null
-    ) | (
-    mview \
-    -in fasta -sort cov:pid -minident 30 -bold -css on -gap " " -html data \
-    -pagecolor "black" -textcolor "white" -alncolor "black" -labcolor \
-    "white" -symcolor "darkgray" -coloring mismatch -colormap david_seaview \
-    -colorfile $davidpal> LampAid/$npt.html 2>/dev/null & spinner
+    #tee >(
+
+    mview $i-tmp-fna \
+    -in fasta -sort cov:pid -gap "*" -minident 30 \
+    -out fasta | seqkit seq -j 1 -w 999 > LampAid/$npt.fasta #2>/dev/null
+	#)
+	
+	primernames=`head $i-tmp-actual -n 1 | sed 's/primerset\t//g' |sed -z 's/\t/\n/g'|sed 's/.*-set/set/g' |\
+    sed -z 's/\n/,/g' |sed 's/^/Refences,Cov,Pid,/1'`
+	
+	printf "\n$primernames"
+
+	(
+
+    sed 's/ /@/g' LampAid/$npt.fasta | sed 's/\t/\t/g' | \
+	awk -v OFS='' -F '' '/>/ {printf $0"@"; next} NR==2 {
+	
+	IGNORECASE = 1
+	for (i = 1; i <= NF; i++)
+	
+	{ faheader[i] = $i}; print $0 "\t"; next }
+
+	{
+	{
+    
+    for (i = 1; i <= NF; i++)
+	    
+	{
+    if ($i != faheader[i] && $i == "a") 
+    {$i="\033[41m" $i "\033[0m"} #red for a
+    if ($i != faheader[i] && $i == "t")
+    {$i="\033[44m" $i "\033[0m"} #blue for t
+    if ($i != faheader[i] && $i == "c")
+    {$i="\033[42m" "\033[1;30m" $i "\033[0m"} #green for c
+    if ($i != faheader[i] && $i == "g")
+    {$i="\033[43m" "\033[1;30m" $i "\033[0m"} #yellow for g
+    }
+    printf $0 "\n"
+    print ""
+
+    
+    }
+	}' | sed 's/NN/@/g' | column -s "@" -t -N $primernames | aha --black --title $npt > LampAid/$npt.html # & spinner
     )
     
-
-    
-    #sed 's/-|-/NN/g' LampAid/$npt.fasta -i
-    
-    echo -ne "    $npt; Total "$count " of $varlen to process; " $(( (100-$count *100/$varlen) )) "% done\r"
-    
-    #sed -e '1,269d' LampAid/$npt.html -i
-    sed -e '1,7d' LampAid/$npt.html -i
-    
-
-    
-    sed '0,/^/s//@/' LampAid/$npt.html -i
-    
-    grep -v "<SMALL>" LampAid/$npt.html > $i-tmp-tmp && mv $i-tmp-tmp LampAid/$npt.html
-    
-
-    
-    cat $davidml LampAid/$npt.html > $i-tmp-tmp && mv $i-tmp-tmp LampAid/$npt.html
-
-    sed -z "s#>\n@  #>   #" LampAid/$npt.html -i
-    
-
-    
-    #sed -z 's#</STRONG>\n#</STRONG>\n</div></div>#' LampAid/$npt.html -i
-    
-    
-    spcnm=`echo $npt | sed 's/set.*//g'`
-    primernames=`head $i-tmp-actual -n 1|sed 's/primerset\t/\t/g'|sed -z 's/\t/\n/g'|sed 's/.*-set/set/g'|\
-    sed -z 's/\n/\t/g' | sed 's/-/@/g'`
-    
-    sed "s#   cov    pid .*>#cov    pid$primernames#g" LampAid/$npt.html -i
-    rm $i-tmp-actual
-    
-
-
-    sed -z "s#\tset#</div>\n<div class=\'flex-child\'>set#g" LampAid/$npt.html -i
-    
-
-
-    sed -z "s#\n 1 actual#</div></div>\n 1 actual#" LampAid/$npt.html -i
-    
-
-    #sed 's#</div></div>#</div></div></PRE><PRE>#g' LampAid/$npt.html -i
-    
-    sed -z 's#<STRONG>   </STRONG>#<STRONG>   </STRONG></PRE><PRE>#g' LampAid/$npt.html -i
-
-    sed 's/>set/>\tset/g' LampAid/$npt.html -i
-
-    sed 's/@B1/-B1\t/g' LampAid/$npt.html | sed 's/@B2/-B2\t/g' | sed 's#@B3\t#-B3\t</div></div></PRE><PRE>#g' |\
-    sed 's/@F1/-F1\t/g' | sed 's/@F2/-F2\t/g' | sed 's/@F3/-F3\t/g' |\
-    sed 's/@LF/-LF\t/g' | sed 's/@LB/-LB\t/g' > tmp && mv tmp LampAid/$npt.html
-    
-    
-    sed s'#\tc</div>#c</div>#'g LampAid/$npt.html -i
+	#echo -ne "    $npt; Total "$count " of $varlen to process; " $(( (100-$count *100/$varlen) )) "% done\r"
     
     #sed 's/-|-/NN/g' $i-tmp-fna -i
     
