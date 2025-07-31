@@ -473,14 +473,21 @@ exit 1; }
     #tee >(
 
     mview $i-tmp-fna \
-    -in fasta -sort cov:pid -gap "*" -minident 30 \
+    -in fasta -sort cov:pid -gap "-" -minident 30 \
     -out fasta | seqkit seq -j 1 -w 999 > LampAid/$npt.fasta #2>/dev/null
 	#)
 	
-	primernames=`head $i-tmp-actual -n 1 | sed 's/primerset\t//g' |sed -z 's/\t/\n/g'|sed 's/.*-set/set/g' |\
-    sed -z 's/\n/,/g' |sed 's/^/Refences,Cov,Pid,/1'`
+	head1=`head $i-tmp-actual -n 1 | sed 's/primerset\t//g' |sed -z 's/\t/\n/g' | \
+	sed 's/.*-set/set/g' | sed '1i\>References\nCov\nPid'`
 	
-	printf "\n$primernames"
+	head2=`head -n 2 LampAid/$npt.fasta | sed -z 's/ /\n/g' | sed 's/NN/\n/g'`
+	
+	paste <(echo "$head1") <(echo "$head2") --delimiters '@' | sed -z 's/\n/@@/g' > $i-tmp-head3
+	
+	#printf $primernames
+	
+	
+	#awk '{for(i=1;i<=NF;i++)cols[i]=(cols[i]==""?$i:cols[i]" "$i)}END{for(i=1;i<=length(cols);i++)print cols[i]}' actual.tab
 
 	(
 
@@ -512,10 +519,52 @@ exit 1; }
 
     
     }
-	}' | sed 's/NN/@/g' | column -s "@" -t -N $primernames | aha --black --title $npt > LampAid/$npt.html # & spinner
-    )
+	}' | sed 's/NN/@/g' | sed -z 's/\n\n/\n/g' > LampAid/$npt.html #| aha --black --title $npt > LampAid/$npt.html
+    ) #& spinner
     
-	#echo -ne "    $npt; Total "$count " of $varlen to process; " $(( (100-$count *100/$varlen) )) "% done\r"
+    cat $i-tmp-head3 LampAid/$npt.html | sed -z "s|@@>|@@\n>|g" | \
+    sed -z "s|>actual|actual|1" | aha --black --title $npt > $i-tmp-tmp && mv $i-tmp-tmp LampAid/$npt.html
+    
+    
+    sed "s|@@|</th><th>|g" LampAid/$npt.html -i   
+    sed '11s|@|\n|g' LampAid/$npt.html -i
+    sed "11s|&gt;|</tr><tr><th>|g" LampAid/$npt.html -i
+    
+    
+    cp LampAid/$npt.html aaa.html
+    
+    
+    
+    sed "s|@|</td><td>|g" LampAid/$npt.html -i
+    sed "s|&gt;|</tr><tr><td>|g" LampAid/$npt.html -i
+    sed -z "s|<pre>|<style>td {padding-left: 7px;padding-right: 7px;}\n</style><pre><table>\n$primernames|g" LampAid/$npt.html -i
+    sed -z "s|</pre>|</td></tr></table></pre>|g" LampAid/$npt.html -i
+    sed '11i\
+    table tr:nth-child(odd) td{background: black;}\
+    table tr:nth-child(even) td{background: #333;}' LampAid/$npt.html -i
+    
+    sed "8i\<div class=\'cursor\'>\n<div class=\'vt\'></div>\n<div class=\'hl\'></div>\n\
+    </div><script>\nconst cursorVT = document.querySelector(\'.vt\')\nconst cursorHL = document.querySelector(\'.hl\')\ndocument.addEventListener(\'mousemove\', e => {\ncursorVT.setAttribute(\'style\', \`left: \${e.clientX}px;\`)\ncursorHL.setAttribute(\'style\', \`top: \${e.clientY}px;\`)\n})\n</script>" LampAid/$npt.html -i
+        
+    sed "22i\.cursor {position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 1; pointer-events: none;}" LampAid/$npt.html -i
+    
+    sed "23i\.vt {position: absolute; top: 0; bottom: 0; width: 1px; background: cyan;}" LampAid/$npt.html -i
+    
+    sed "24i\.hl {position: absolute; height: 1px; left: 0; right: 0; background: cyan;}" LampAid/$npt.html -i
+    
+    sed '27i\th {background:#b6b6ba; color:black;position: sticky;top: 0px;\
+    border: 0px solid red;line-height:1; padding: 1px; margin:2px; font-size: 12px; font-family:monospace}' LampAid/$npt.html -i
+    
+    
+    echo ""
+    
+    #sed '29i\th2 {background:#b6b6ba; color:black;position: sticky;top: 0px;\
+    #border: 0px solid red;line-height:1; padding: 1px; margin:2px; font-size: 12px; font-family:monospace}' LampAid/$npt.html -i
+    
+    #sed '33s/td/th2/g' LampAid/$npt.html -i
+    
+    #| column -t -s '@' -N $primernames > LampAid/$npt.html #| aha --black --title $npt > LampAid/$npt.html # & spinner
+	echo -ne "    $npt; Total "$count " of $varlen to process; " $(( (100-$count *100/$varlen) )) "% done\r"
     
     #sed 's/-|-/NN/g' $i-tmp-fna -i
     
