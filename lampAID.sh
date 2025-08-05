@@ -1,14 +1,7 @@
 #!/bin/bash
-
-davidml="david-ml"
-davidpal="david-pal"
-
-nmmt=$2
-ncpus=$3
-
-
-
 #LampAID: simplified bash minipipeline to help lamp primersets design and selection
+
+clock1=$(date +%s.%3N)
 
 echo "$(date)"
 echo -e "
@@ -20,8 +13,151 @@ echo -e "
 trap "echo ''; trap - SIGTERM && (kill -- -$$) & disown %" EXIT
 
 
+davidml="david-ml"
+davidpal="david-pal"
 
 
+# Define the usage function
+usage() {
+  echo -e "
+  Usage:
+  lampAID.sh
+  [-o Options    ('search' or 'tab-build' or 'html-build')]
+  [-m Mismatches (0 to 3)] Only needed in search mode 
+  [-c CPUs       (number of cpus allowed to parallel search or build)]"
+}
+
+searchinputs() {
+  echo "    A folder called 'step1' should contain 'merged-refs.fna' and 'primersets.fna' files"
+}
+
+buildinputs() {
+  echo -e "    Run search mode first,
+  step1/found.tab and splitout/*.split files are needed to build the outputs"
+}
+
+# Process options with getopts
+while getopts ":o:m:c:h" opt; do
+  case $opt in
+    o|--option)
+      mode="$OPTARG" ;;
+    m)
+      nmmt="$OPTARG" ;;
+    c)
+      ncpus="$OPTARG" ;;
+    h)
+      usage
+      exit 0
+      ;;
+    \?)
+      echo "Error: Invalid parameter '-$OPTARG'; check usage"
+      usage
+      exit 1
+      ;;
+    :)
+      echo "Error: Parameter -$OPTARG requires an argument; check usage"
+      usage
+      exit 1
+      ;;
+  esac
+done
+
+
+# parameters
+if [[ "$mode" == 'html-build' && -z "$ncpus" ]]; then
+  echo "Missing parameters; check usage"
+  usage
+  exit 1
+
+elif [[ "$mode" != 'search' && "$mode" != 'html-build' && "$mode" != 'tab-build' ]]; then
+  echo "Mode parameter accepts either 'search' or 'html-build' or 'tab-build' "
+  usage
+  exit 1
+
+elif [[ "$mode" != 'html-build' && "$mode" != 'tab-build' && -z "$nmmt" ]]; then
+  echo "Missing parameters; check usage"
+  usage
+  exit 1
+  
+elif [[ -z "$mode" && -z "$nmmt" && -z "$ncpus" ]]; then
+  echo "Missing parameters; check usage"
+  usage
+  exit 1
+
+elif [[ "$mode" == 'search' && ! "$nmmt" =~ ^[0-9]+$ ]]; then
+    echo -e "integer Search mode - Error:
+    Expected mismatches should be an integer within 0 - 3
+    You typed '$nmmt'"
+    exit 1
+
+elif [[ "$nmmt" < 0 && "$mode" == 'search' ]] ; then
+  echo -e "<0 Search mode - Error:
+  Expected mismatches should be an integer within 0 - 3\n
+  You typed $nmmt"
+  exit 1
+  
+elif [[ "$nmmt" > 5 && "$mode" == 'search' ]] ; then
+  echo -e ">3 Search mode - Error:
+  Expected mismatches should be an integer within 0 - 3\n
+  You typed $nmmt"
+  exit 1
+
+elif ! [[ "$ncpus" =~ ^[0-9]+$ ]]; then
+    echo -e "Error:
+    CPUs should be an integer greater than 0
+    You typed '$ncpus'"
+    exit 1
+  
+fi
+
+# build inputs
+if [[ "$mode" == 'html-build' && ! -e step1/found.tab ]]; then
+    echo -e "Build mode - Error:
+    found.tab file not found:"
+    buildinputs
+    exit 1
+
+elif [[ "$mode" == 'html-build' && ! -e splitout/ ]]; then
+    echo -e "Build mode - Error:
+    Splitout folder not found"
+    buildinputs
+    exit 1
+
+elif [[ "$mode" == 'html-build' && $(ls -1 splitout/*.split 2> /dev/null | wc -l) < 1 ]]; then
+    echo "$mode"
+    echo -e "Build mode - Error:
+    .split files not found:"
+    buildinputs
+    exit 1
+    
+elif [[ "$mode" == 'search' && ! -e step1/primersets.fna ]];then
+    echo -e "@Search mode - Error:
+    primersets.fna file not found:"
+    searchinputs
+    exit 1
+fi
+
+if [[ "$mode" == 'search' && ! -e step1/merged-refs.fna && ! -e step1/merged-refs.fna ]]; then
+    echo -e "@Search mode - Error:
+    Input folder or files not found:"
+    searchinputs
+    exit 1
+    
+elif [[ "$mode" == 'search' && ! -e step1/merged-refs.fna ]]; then
+    echo -e "@Search mode - Error:
+    merged-refs.fna file not found:"
+    searchinputs
+    exit 1
+    
+elif [[ "$mode" == 'search' && ! -e step1/primersets.fna ]];then
+    echo -e "@Search mode - Error:
+    primersets.fna file not found:"
+    searchinputs
+    exit 1
+fi
+
+
+# dependencies
 if ! command -v awk &> /dev/null
 then
     echo -e "Error:\n\
@@ -54,6 +190,7 @@ elif ! command -v mview &> /dev/null; then
     exit 1    
 fi
 
+#spinner
 spinner() {
   local pid=$!
   spin='-\|/'
@@ -69,6 +206,14 @@ spinner() {
   done
 }
 
+# ncpus overwrite
+if (( $ncpus > 3 ));then
+    ncpus=$(($ncpus - 2))
+else
+    ncpus=1
+fi
+    
+# lampAIDsplt
 lampAIDsplt() {
 
     echo "$(date) >>> Split"
@@ -85,21 +230,21 @@ lampAIDsplt() {
     > splitout/split.tab
     
     names=`awk 'NR > 1 {print $6}' splitout/split.tab | sed 's/\(.*\)-.*/\1/' | sort -u`
-    
-    
-    
-    N=$(($ncpus - 2))
-    
+    echo $names
+        
     varlen=$(wc -w <<< "$names")
     
     count=$varlen
+    
+    echo "inside split fun $ncpus"
     
     time (
     for i in $names; do 
     
     set +e
+
     
-    ((k=k%N)); ((k++==0)) && wait
+    ((k=k%ncpus)); ((k++==0)) && wait
     (
     #head -n 1 splitout/split.tab | \
     #sed 's/primer/ref\tprimer/g' > $i.split
@@ -108,9 +253,9 @@ lampAIDsplt() {
     
     sed 's/\t\t\t//g' splitout/$i.split -i
     
-    
-    echo -ne "Total "$count " of $varlen to process; " $(( (100-$count *100/$varlen) )) "% done\r"
-    echo -ne "$i\r"
+
+    echo -ne "   Total "$count " of $varlen to process; " $(( (100-$count *100/$varlen) )) "% done; $i\r"
+
     
     
     
@@ -122,6 +267,7 @@ lampAIDsplt() {
     wait 
     
     printf "%100s" ""
+    sleep 1
     echo " "
     echo -e "Search mode outputs ready"
     
@@ -130,81 +276,14 @@ lampAIDsplt() {
     
 }
 
-[[ -z "$1" ]] && { \
-echo -e "\
-Error:\n\
-Positional parameter 1 is empty: You should pass the mode\n\
-syntax: lampAID.sh [MODE] [OPTIONS]\n
-MODE: either 'search' or 'build', without quotes
-OPTIONS: [NUMBER OF MISMATCHES] followed by [NUMBER OF CPUs] 
-NUMBER OF MISMATCHES: Max mismacthes allowed in search, between 0 (exact match) and 3
-NUMBER OF CPUs: Max CPUs to run in parallel.
-Be careful to use a value smaller than the actual number of CPUs in your computer\n
-for example, use 'lampAID.sh search 3 10' to search allowing max 3 mismatches and using 10 cpus \n
-             or  'lampAID.sh build 10' to build outputs using 10 cpus " ; \
-exit 1; }
-
-if [ $1 = search ]; then
-
-    if [ ! -e step1/merged-refs.fna ];then
-    echo -e "Search mode - Error:\n\
-    merged-refs.fna file not found: Merged reference genomes are obligatory
-       Put merged-refs.fna and primersets.fna in a folder called 'step1' \n
-    syntax: lampAID.sh [MODE] [OPTIONS]\n
-    for example, use 'lampAID.sh search 3 10' to search allowing max 3 mismatches and using 10 cpus \n
-                 or  'lampAID.sh build 10' to build outputs using 10 cpus "
-    exit 1
-    fi
+# searchmode
+searchmode() {
+echo $mode
     
-    if [ ! -e step1/primersets.fna ];then
-    echo -e "Search mode - Error:\n\
-    primersets.fna file not found: Primer sets are obligatory
-       Put merged-refs.fna and primersets.fna in a folder called 'step1'\n
-    syntax: lampAID.sh [MODE] [OPTIONS]\n
-    for example, use 'lampAID.sh search 3 10' to search allowing max 3 mismatches and using 10 cpus \n
-                 or  'lampAID.sh build 10' to build outputs using 10 cpus "
-    exit 1
-    fi
+    #nmmt=$2
     
-    
-[[ -z "$2" ]] && { \
-echo -e "\
-Search mode - Error:\n\
-Positional parameter 2 is empty: You should pass the number of mismatches\n\
-syntax; lampAID.sh search [NUMBER OF MISMATCHES] [NUMBER OF CPUs]\n" ; \
-exit 1; }
-
-[[ -z "$3" ]] && { \
-echo -e "\
-Search mode - Error:\n\
-Positional parameter 3 is empty: You should pass the number of cpus\n\
-syntax: lampAID.sh search [NUMBER OF MISMATCHES] [NUMBER OF CPUs]\n
-for example, use 'lampAID.sh search 3 10' to search allowing max 3 mismatches and using 10 cpus \n
-             or  'lampAID.sh build 10' to build outputs using 10 cpus " ; \
-exit 1; }
-
-    if (( $2 < 0 || $2 > 3 )); then
-    echo -e "Search mode - Error:\n\
-    Expected mismatches should be an integer within 0 - 3\n
-    You typed '$2'"
-
-    exit 1
-    fi
-    
-    [[ ! "$2" =~ ^[0-9]+$ ]] && { \
-    echo -e "Search mode - Error:\n\
-    Expected mismatches should be an integer within 0 - 3\n
-    You typed '$2'";
-    exit 1; }
-
-    [[ ! "$3" =~ ^[0-9]+$ ]] && { \
-    echo -e "Search mode - Error:\n\
-    CPUs should be an integer\n
-    You typed '$3'";
-    exit 1; }
-
-
-
+    echo "Number of mismatches $nmmt"
+    echo "cpu $ncpus; ncpus $ncpus"
 
 
     if [ ! -e step1/merged-refs-ready.fna ];then
@@ -260,81 +339,191 @@ totall=`wc -l < step1/merged-refs-ready.fna`
 #-f step1/primersets.fna > step1/found.tab )
 
 time ( cat step1/merged-refs-ready.fna | pv -N "   " -l -s $totall | seqkit locate -I -i -m $nmmt -j $ncpus \
--f step1/primersets.fna > step1/found.tab ) & spinner
+-f step1/primersets.fna > step1/found.tab ) #& spinner
 
 
-
+# // Split function
 echo ""
 
 lampAIDsplt
 
+}
 
-#lampAID.sh build mode
+htmlout() {
 
-elif [ $1 = build ]; then
+  sed 's/ /@/g' LampAid/$npt.fasta | sed 's/\t/\t/g' | \
+	awk -v OFS='' -F '' '/>/ {printf $0"@"; next} NR==2 {
+	
+	IGNORECASE = 1
+	for (i = 1; i <= NF; i++)
+	
+	{ faheader[i] = $i}; print $0 "\t"; next }
 
-[[ -z "$2" ]] && { \
-echo -e "\
-Build mode - Error:\n\
-Positional parameter 2 is empty: You should pass the number of cpus\n\
-syntax; lampAID.sh build [NUMBER OF CPUs]\n
-for example, use 'lampAID.sh build 10' to build outputs using 10 cpus " ; \
-exit 1; }
+	{
+	{
+    
+    for (i = 1; i <= NF; i++)
+	    
+	{
+    if ($i != faheader[i] && $i == "a") 
+    {$i="\033[41m" $i "\033[0m"} #red for a
+    if ($i != faheader[i] && $i == "t")
+    {$i="\033[44m" $i "\033[0m"} #blue for t
+    if ($i != faheader[i] && $i == "c")
+    {$i="\033[42m" "\033[1;30m" $i "\033[0m"} #green for c
+    if ($i != faheader[i] && $i == "g")
+    {$i="\033[43m" "\033[1;30m" $i "\033[0m"} #yellow for g
+    }
+    printf $0 "\n"
+    print ""
 
-
-    [[ ! "$2" =~ ^[0-9]+$ ]] && { \
-    echo -e "Build mode - Error:\n\
-    CPUs should be an integer
-      You typed '$2'\n
-    syntax: lampAID.sh build [NUMBER OF CPUs]\n
-    for example, use 'lampAID.sh build 10' to run using 10 cpus ";
-    exit 1; }
-
-
-    if [ ! -e step1/found.tab ];then
-    echo -e "\
-    Build mode - Error:\n\
-    found.tab file not found: You should run search mode first\n\
-    syntax: lampAID.sh [MODE] [OPTIONS]\n
-    for example, use 'lampAID.sh search 3 10' to search allowing max 3 mismatches and using 10 cpus "
-    exit 1
-    fi
-            
-    if [ ! -e LampAid ];then
-    mkdir LampAid;
-    fi
+    
+    }
+	}' | sed 's/NN/@/g' | sed -z 's/\n\n/\n/g' > LampAid/$npt.html #| aha --black --title $npt > LampAid/$npt.html
+     
+    cp LampAid/$npt.html 00-${npt}.html
+    
+    cat $i-tmp-head3 LampAid/$npt.html | sed -z "s|@@>|@@\n>|g" | \
+    sed -z "s|>actual|actual|1" | aha --black --title $npt > $i-tmp-tmp && mv $i-tmp-tmp LampAid/$npt.html
     
     
-    echo " $(date) >>> Build"
-    echo ""
+    sed "s|@@|</th><th>|g" LampAid/$npt.html -i   
+    sed '11s|@|\n|g' LampAid/$npt.html -i
+    sed "11s|&gt;|</tr><tr><th>|g" LampAid/$npt.html -i
     
-    time(
-    cat step1/primersets.fna | \
-    pv -N "   " | \
-    seqkit -j $2 split step1/primersets.fna -i --id-regexp "^(.*[\w]+)\-" \
-    -O splitout --by-id-prefix "" --quiet 2>/dev/null
-    )
+    
+    cp LampAid/$npt.html aaa.html
+    
+    
+    
+    sed "s|@|</td><td>|g" LampAid/$npt.html -i
+    sed "s|&gt;|</tr><tr><td>|g" LampAid/$npt.html -i
+    sed -z "s|<pre>|<style>td {padding-left: 7px;padding-right: 7px;}\n</style><pre><table>\n$primernames|g" LampAid/$npt.html -i
+    sed -z "s|</pre>|</td></tr></table></pre>|g" LampAid/$npt.html -i
+    sed '11i\
+    table tr:nth-child(odd) td{background: black;}\
+    table tr:nth-child(even) td{background: #333;}' LampAid/$npt.html -i
+    
+    sed "8i\<div class=\'cursor\'>\n<div class=\'vt\'></div>\n<div class=\'hl\'></div>\n\
+    </div><script>\nconst cursorVT = document.querySelector(\'.vt\')\nconst cursorHL = document.querySelector(\'.hl\')\ndocument.addEventListener(\'mousemove\', e => {\ncursorVT.setAttribute(\'style\', \`left: \${e.clientX}px;\`)\ncursorHL.setAttribute(\'style\', \`top: \${e.clientY}px;\`)\n})\n</script>" LampAid/$npt.html -i
+        
+    sed "22i\.cursor {position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 1; pointer-events: none;}" LampAid/$npt.html -i
+    
+    sed "23i\.vt {position: absolute; top: 0; bottom: 0; width: 1px; background: cyan;}" LampAid/$npt.html -i
+    
+    sed "24i\.hl {position: absolute; height: 1px; left: 0; right: 0; background: cyan;}" LampAid/$npt.html -i
+    
+    sed '27i\th {background:#b6b6ba; color:black;position: sticky;top: 0px;\
+    border: 0px solid red;line-height:1; padding: 1px; margin:2px; font-size: 12px; font-family:monospace}' LampAid/$npt.html -i
+    } #make html
+
+tabout() {
+
+  sed 's/ /@/g' LampAid/$npt.fasta | sed 's/\t/\t/g' | \
+	awk -v OFS='' -F '' '/>/ {printf $0"@"; next} NR==2 {
+	
+	IGNORECASE = 1
+	for (i = 1; i <= NF; i++)
+	
+	{ faheader[i] = $i}; print $0 "\t"; next }
+
+	{
+	{
+    
+    for (i = 1; i <= NF; i++)
+	    
+	{
+    if ($i == faheader[i] && $i != "N") 
+    {$i="." }
+    }
+    printf $0 "\n"
+    print ""
+
+    
+    }
+	}' | sed 's/NN/\t/g' | sed 's/@/\t/g' | sed -z 's/\n\n/\n/g' > LampAid/$npt.tab #| aha --black --title $npt > LampAid/$npt.html
+     
+    
+    # cp LampAid/$npt.html 00-${npt}.html
+    # 
+    # cat $i-tmp-head3 LampAid/$npt.html | sed -z "s|@@>|@@\n>|g" | \
+    # sed -z "s|>actual|actual|1" | aha --black --title $npt > $i-tmp-tmp && mv $i-tmp-tmp LampAid/$npt.html
+    # 
+    # 
+    # sed "s|@@|</th><th>|g" LampAid/$npt.html -i   
+    # sed '11s|@|\n|g' LampAid/$npt.html -i
+    # sed "11s|&gt;|</tr><tr><th>|g" LampAid/$npt.html -i
+    # 
+    # 
+    # cp LampAid/$npt.html aaa.html
+    # 
+    # 
+    # 
+    # sed "s|@|</td><td>|g" LampAid/$npt.html -i
+    # sed "s|&gt;|</tr><tr><td>|g" LampAid/$npt.html -i
+    # sed -z "s|<pre>|<style>td {padding-left: 7px;padding-right: 7px;}\n</style><pre><table>\n$primernames|g" LampAid/$npt.html -i
+    # sed -z "s|</pre>|</td></tr></table></pre>|g" LampAid/$npt.html -i
+    # sed '11i\
+    # table tr:nth-child(odd) td{background: black;}\
+    # table tr:nth-child(even) td{background: #333;}' LampAid/$npt.html -i
+    # 
+    # sed "8i\<div class=\'cursor\'>\n<div class=\'vt\'></div>\n<div class=\'hl\'></div>\n\
+    # </div><script>\nconst cursorVT = document.querySelector(\'.vt\')\nconst cursorHL = document.querySelector(\'.hl\')\ndocument.addEventListener(\'mousemove\', e => {\ncursorVT.setAttribute(\'style\', \`left: \${e.clientX}px;\`)\ncursorHL.setAttribute(\'style\', \`top: \${e.clientY}px;\`)\n})\n</script>" LampAid/$npt.html -i
+    #     
+    # sed "22i\.cursor {position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 1; pointer-events: none;}" LampAid/$npt.html -i
+    # 
+    # sed "23i\.vt {position: absolute; top: 0; bottom: 0; width: 1px; background: cyan;}" LampAid/$npt.html -i
+    # 
+    # sed "24i\.hl {position: absolute; height: 1px; left: 0; right: 0; background: cyan;}" LampAid/$npt.html -i
+    # 
+    # sed '27i\th {background:#b6b6ba; color:black;position: sticky;top: 0px;\
+    # border: 0px solid red;line-height:1; padding: 1px; margin:2px; font-size: 12px; font-family:monospace}' LampAid/$npt.html -i
+    } #make html
+
+
+# buildmode
+buildmode() {
+if [ ! -e LampAid ];then
+  mkdir LampAid;
+fi
+    
+    
+echo " $(date) >>> Build"
+echo ""
+
+
+time (
+cat step1/primersets.fna | \
+pv -N "   " | \
+seqkit -j $ncpus split step1/primersets.fna -i --id-regexp "^(.*[\w]+)\-" \
+-O splitout --by-id-prefix "" --quiet 2>/dev/null
+)
+
+
     #mv LampAid/*.fna splitout
     
-        
-    N=$(($2 - 2))
     
-    npts=`basename -a -s .split splitout/*.split`
+    npts=`basename -a -s .split $(ls -Sr splitout/*.split)`
+    echo -e "splitfiles
+    $npts"
     
     varlen=$(wc -w <<< "$npts")
     
     count=$varlen
     
     echo ' Start building '
+    
+    echo "will use $ncpus cpus"
+    
+    
     time (
     for npt in $npts; do
+    
 
-    ((k=k%N)); ((k++==0)) && wait
+    ((k=k%ncpus)); ((k++==0)) && wait
     
     (
     
-
-    #sleep 5
     i=splitout/${npt}.split
     j=splitout/${npt}.fna
 
@@ -344,7 +533,6 @@ exit 1; }
     #fi
     
     
-
     sort $i -k1,1 -k10,10n -k11,11n \
     > $i-tmp-pivot
     
@@ -382,8 +570,8 @@ exit 1; }
     
     names=`grep -f $i-tmp-found $i-tmp-expec -v`
     
-    for line in $names; do
     echo $names
+    for line in $names; do
     
     awk -v sets=$line 'NR==1{print $0"\t"sets}  NR>1{print $0"\t""x"}' \
     $i-tmp-pivot > $i-tmp-tmp && mv $i-tmp-tmp $i-tmp-pivot; done
@@ -489,74 +677,14 @@ exit 1; }
 	
 	#awk '{for(i=1;i<=NF;i++)cols[i]=(cols[i]==""?$i:cols[i]" "$i)}END{for(i=1;i<=length(cols);i++)print cols[i]}' actual.tab
 
-	(
+if [[ "$mode" == 'html-build' ]]; then
+htmlout
 
-    sed 's/ /@/g' LampAid/$npt.fasta | sed 's/\t/\t/g' | \
-	awk -v OFS='' -F '' '/>/ {printf $0"@"; next} NR==2 {
-	
-	IGNORECASE = 1
-	for (i = 1; i <= NF; i++)
-	
-	{ faheader[i] = $i}; print $0 "\t"; next }
+elif [[ "$mode" == 'tab-build' ]]; then
+tabout
 
-	{
-	{
-    
-    for (i = 1; i <= NF; i++)
-	    
-	{
-    if ($i != faheader[i] && $i == "a") 
-    {$i="\033[41m" $i "\033[0m"} #red for a
-    if ($i != faheader[i] && $i == "t")
-    {$i="\033[44m" $i "\033[0m"} #blue for t
-    if ($i != faheader[i] && $i == "c")
-    {$i="\033[42m" "\033[1;30m" $i "\033[0m"} #green for c
-    if ($i != faheader[i] && $i == "g")
-    {$i="\033[43m" "\033[1;30m" $i "\033[0m"} #yellow for g
-    }
-    printf $0 "\n"
-    print ""
+fi
 
-    
-    }
-	}' | sed 's/NN/@/g' | sed -z 's/\n\n/\n/g' > LampAid/$npt.html #| aha --black --title $npt > LampAid/$npt.html
-    ) #& spinner
-    
-    cat $i-tmp-head3 LampAid/$npt.html | sed -z "s|@@>|@@\n>|g" | \
-    sed -z "s|>actual|actual|1" | aha --black --title $npt > $i-tmp-tmp && mv $i-tmp-tmp LampAid/$npt.html
-    
-    
-    sed "s|@@|</th><th>|g" LampAid/$npt.html -i   
-    sed '11s|@|\n|g' LampAid/$npt.html -i
-    sed "11s|&gt;|</tr><tr><th>|g" LampAid/$npt.html -i
-    
-    
-    cp LampAid/$npt.html aaa.html
-    
-    
-    
-    sed "s|@|</td><td>|g" LampAid/$npt.html -i
-    sed "s|&gt;|</tr><tr><td>|g" LampAid/$npt.html -i
-    sed -z "s|<pre>|<style>td {padding-left: 7px;padding-right: 7px;}\n</style><pre><table>\n$primernames|g" LampAid/$npt.html -i
-    sed -z "s|</pre>|</td></tr></table></pre>|g" LampAid/$npt.html -i
-    sed '11i\
-    table tr:nth-child(odd) td{background: black;}\
-    table tr:nth-child(even) td{background: #333;}' LampAid/$npt.html -i
-    
-    sed "8i\<div class=\'cursor\'>\n<div class=\'vt\'></div>\n<div class=\'hl\'></div>\n\
-    </div><script>\nconst cursorVT = document.querySelector(\'.vt\')\nconst cursorHL = document.querySelector(\'.hl\')\ndocument.addEventListener(\'mousemove\', e => {\ncursorVT.setAttribute(\'style\', \`left: \${e.clientX}px;\`)\ncursorHL.setAttribute(\'style\', \`top: \${e.clientY}px;\`)\n})\n</script>" LampAid/$npt.html -i
-        
-    sed "22i\.cursor {position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 1; pointer-events: none;}" LampAid/$npt.html -i
-    
-    sed "23i\.vt {position: absolute; top: 0; bottom: 0; width: 1px; background: cyan;}" LampAid/$npt.html -i
-    
-    sed "24i\.hl {position: absolute; height: 1px; left: 0; right: 0; background: cyan;}" LampAid/$npt.html -i
-    
-    sed '27i\th {background:#b6b6ba; color:black;position: sticky;top: 0px;\
-    border: 0px solid red;line-height:1; padding: 1px; margin:2px; font-size: 12px; font-family:monospace}' LampAid/$npt.html -i
-    
-    
-    echo ""
     
     #sed '29i\th2 {background:#b6b6ba; color:black;position: sticky;top: 0px;\
     #border: 0px solid red;line-height:1; padding: 1px; margin:2px; font-size: 12px; font-family:monospace}' LampAid/$npt.html -i
@@ -564,12 +692,11 @@ exit 1; }
     #sed '33s/td/th2/g' LampAid/$npt.html -i
     
     #| column -t -s '@' -N $primernames > LampAid/$npt.html #| aha --black --title $npt > LampAid/$npt.html # & spinner
-	echo -ne "    $npt; Total "$count " of $varlen to process; " $(( (100-$count *100/$varlen) )) "% done\r"
+	echo -ne "   Total "$count " of $varlen to process; " $(( (100-$count *100/$varlen) )) "% done; $npt;\r"
     
     #sed 's/-|-/NN/g' $i-tmp-fna -i
     
     )
-    
     
     rm $i-tmp* -r 
     
@@ -587,27 +714,27 @@ wait
     echo -e " Build outputs ready"
     
     echo "$(date) >>> Finished"
-)
+
+) # time process .fna and .split
+
+}
 
 
-else
-    echo -e "Error:\n\
-    syntax: lampAID.sh [MODE] [OPTIONS]\n
-    MODE: either 'search' or 'build', without quotes
-       You typed '$1'
-    
-    OPTIONS: [NUMBER OF MISMATCHES] followed by [NUMBER OF CPUs] 
-    NUMBER OF MISMATCHES: Max mismacthes allowed in search, between 0 (exact match) and 3
-    NUMBER OF CPUs: Max CPUs to run in parallel.
-    Be careful to use a value smaller than the actual number of CPUs in your computer\n
-    for example, use 'lampAID.sh search 3 10' to search allowing max 3 mismatches and using 10 cpus \n
-             or  'lampAID.sh build 10' to build outputs using 10 cpus "
-    exit 1
+if [[ "$mode" = 'search' ]]; then
+searchmode
 
-fi
+elif [[ "$mode" = 'html-build' || "$mode" == 'tab-build' ]]; then
+buildmode
+
+fi & spinner
 
 
+clock2=$(date +%s.%3N)
+duration=$(echo "scale=4; $clock2 - $clock1" | bc | xargs printf "%.3f" | sed 's/,/./')
 
+echo ""
+
+echo "$(date) >>> Lampaid ran in total $duration seconds"
 
 
 
