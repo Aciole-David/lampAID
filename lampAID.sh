@@ -327,7 +327,7 @@ echo ""
 #echo " Split merged-refs"
 #time seqkit split2 -p 10 -j 10 step1/merged-refs-ready.fna -O step1/tmp
 
-echo " Search primers"
+
 #time parallel -j 10 " seqkit locate -F -I -i -f step1/primersets.fna {1}" ::: step1/tmp/merged-refs-ready.*> step1/found.tab ; echo -ne '\007'
 
 
@@ -338,7 +338,8 @@ totall=`wc -l < step1/merged-refs-ready.fna`
 #time ( head -n 99999 step1/merged-refs-ready.fna | seqkit locate -I -i -m $nmmt -j $ncpus \
 #-f step1/primersets.fna > step1/found.tab )
 
-time ( cat step1/merged-refs-ready.fna | pv -N "   " -l -s $totall | seqkit locate -I -i -m $nmmt -j $ncpus \
+echo " Searching primers"
+time ( cat step1/merged-refs-ready.fna | pv -N "   " -l -s $totall | seqkit locate -P -I -i -m $nmmt -j $ncpus \
 -f step1/primersets.fna > step1/found.tab ) #& spinner
 
 
@@ -351,7 +352,7 @@ lampAIDsplt
 
 htmlout() {
 
-  sed 's/ /@/g' LampAid/$npt.fasta | sed 's/\t/\t/g' | \
+  	sed 's/ /@/g' LampAid/$npt.fasta | sed 's/\t/\t/g' | \
 	awk -v OFS='' -F '' '/>/ {printf $0"@"; next} NR==2 {
 	
 	IGNORECASE = 1
@@ -381,18 +382,19 @@ htmlout() {
     }
 	}' | sed 's/NN/@/g' | sed -z 's/\n\n/\n/g' > LampAid/$npt.html #| aha --black --title $npt > LampAid/$npt.html
      
-    cp LampAid/$npt.html 00-${npt}.html
+
     
     cat $i-tmp-head3 LampAid/$npt.html | sed -z "s|@@>|@@\n>|g" | \
     sed -z "s|>actual|actual|1" | aha --black --title $npt > $i-tmp-tmp && mv $i-tmp-tmp LampAid/$npt.html
     
+    sed '12d' LampAid/$npt.html -i
     
     sed "s|@@|</th><th>|g" LampAid/$npt.html -i   
     sed '11s|@|\n|g' LampAid/$npt.html -i
     sed "11s|&gt;|</tr><tr><th>|g" LampAid/$npt.html -i
     
     
-    cp LampAid/$npt.html aaa.html
+
     
     
     
@@ -418,8 +420,8 @@ htmlout() {
     } #make html
 
 tabout() {
-
-  sed 's/ /@/g' LampAid/$npt.fasta | sed 's/\t/\t/g' | \
+  
+  	sed 's/ /@/g' LampAid/$npt.fasta | sed 's/\t/\t/g' | \
 	awk -v OFS='' -F '' '/>/ {printf $0"@"; next} NR==2 {
 	
 	IGNORECASE = 1
@@ -441,43 +443,8 @@ tabout() {
 
     
     }
-	}' | sed 's/NN/\t/g' | sed 's/@/\t/g' | sed -z 's/\n\n/\n/g' > LampAid/$npt.tab #| aha --black --title $npt > LampAid/$npt.html
-     
-    
-    # cp LampAid/$npt.html 00-${npt}.html
-    # 
-    # cat $i-tmp-head3 LampAid/$npt.html | sed -z "s|@@>|@@\n>|g" | \
-    # sed -z "s|>actual|actual|1" | aha --black --title $npt > $i-tmp-tmp && mv $i-tmp-tmp LampAid/$npt.html
-    # 
-    # 
-    # sed "s|@@|</th><th>|g" LampAid/$npt.html -i   
-    # sed '11s|@|\n|g' LampAid/$npt.html -i
-    # sed "11s|&gt;|</tr><tr><th>|g" LampAid/$npt.html -i
-    # 
-    # 
-    # cp LampAid/$npt.html aaa.html
-    # 
-    # 
-    # 
-    # sed "s|@|</td><td>|g" LampAid/$npt.html -i
-    # sed "s|&gt;|</tr><tr><td>|g" LampAid/$npt.html -i
-    # sed -z "s|<pre>|<style>td {padding-left: 7px;padding-right: 7px;}\n</style><pre><table>\n$primernames|g" LampAid/$npt.html -i
-    # sed -z "s|</pre>|</td></tr></table></pre>|g" LampAid/$npt.html -i
-    # sed '11i\
-    # table tr:nth-child(odd) td{background: black;}\
-    # table tr:nth-child(even) td{background: #333;}' LampAid/$npt.html -i
-    # 
-    # sed "8i\<div class=\'cursor\'>\n<div class=\'vt\'></div>\n<div class=\'hl\'></div>\n\
-    # </div><script>\nconst cursorVT = document.querySelector(\'.vt\')\nconst cursorHL = document.querySelector(\'.hl\')\ndocument.addEventListener(\'mousemove\', e => {\ncursorVT.setAttribute(\'style\', \`left: \${e.clientX}px;\`)\ncursorHL.setAttribute(\'style\', \`top: \${e.clientY}px;\`)\n})\n</script>" LampAid/$npt.html -i
-    #     
-    # sed "22i\.cursor {position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 1; pointer-events: none;}" LampAid/$npt.html -i
-    # 
-    # sed "23i\.vt {position: absolute; top: 0; bottom: 0; width: 1px; background: cyan;}" LampAid/$npt.html -i
-    # 
-    # sed "24i\.hl {position: absolute; height: 1px; left: 0; right: 0; background: cyan;}" LampAid/$npt.html -i
-    # 
-    # sed '27i\th {background:#b6b6ba; color:black;position: sticky;top: 0px;\
-    # border: 0px solid red;line-height:1; padding: 1px; margin:2px; font-size: 12px; font-family:monospace}' LampAid/$npt.html -i
+	}' | sed 's/NN/\t/g' | sed 's/@/\t/g' | sed -z 's/\n\n/\n/g' | sed '1s/\t.*%/\tFirst\tStt\tEnd\tCov\tPid/' > LampAid/$npt.tab #| aha --black --title $npt > LampAid/$npt.html
+      
     } #make html
 
 
@@ -539,6 +506,7 @@ seqkit -j $ncpus split step1/primersets.fna -i --id-regexp "^(.*[\w]+)\-" \
     awk '{ print $0"\t"$10 - prev } { prev = $10 }' ${i}-tmp-pivot \
     > $i-tmp-tmp && mv $i-tmp-tmp $i-tmp-pivot
     
+    cp $i-tmp-pivot aaa.csv
     
     awk -v mycounter=0 \
     'OFS="\t" {if (sqrt($13^2) < 200) $14=$1":"mycounter; else $14=$1":"++mycounter; print;}' \
@@ -550,11 +518,63 @@ seqkit -j $ncpus split step1/primersets.fna -i --id-regexp "^(.*[\w]+)\-" \
     sed -r 's/(\s+)?\S+//5' $i-tmp-pivot -i
     sed '1s/feat:0/grouped/' $i-tmp-pivot -i
     
-    awk '{print $0":"$3":"$4}' $i-tmp-pivot > $i-tmp-tmp && mv $i-tmp-tmp $i-tmp-pivot
+	
+
+    
+	  awk '{print $0":"$3":"$4}' $i-tmp-pivot > $i-tmp-tmp && mv $i-tmp-tmp $i-tmp-pivot
+    
+    cp $i-tmp-pivot qqq.csv
+    
+    #grep 'F3' $i-tmp-pivot | sed 's/\t/\t@/g' | head 
+    	  
+	  cp $i-tmp-pivot qqq2.csv
+	  
+	  #awk -F'\t' 'BEGIN {OFS = FS} { if ($6 != "arsenal") $11 =  $8"@"$9"@"$10"@"$11; print $0}' $i-tmp-pivot > $i-tmp-tmp && mv $i-tmp-tmp $i-tmp-pivot
+
+	  sed -i 's/-F3/_1-F3/g' $i-tmp-pivot
+    sed -i 's/-F2/_2-F2/g' $i-tmp-pivot
+    sed -i 's/-LF/_3-LF/g' $i-tmp-pivot
+    sed -i 's/-F1/_4-F1/g' $i-tmp-pivot
+    sed -i 's/-B1/_5-B1/g' $i-tmp-pivot
+    sed -i 's/-LB/_6-LB/g' $i-tmp-pivot
+    sed -i 's/-B2/_7-B2/g' $i-tmp-pivot
+    sed -i 's/-B3/_8-B3/g' $i-tmp-pivot
+
+	  cp $i-tmp-pivot qqq3.csv
+	  
+	  (printf "grouped\n"; cat $i-tmp-pivot | awk -F'\t' 'BEGIN {OFS=FS} {print $12,$9,"@",$6"\n"$12,$10,"@",$6}' | \
+	  sed 's/@.*-//g' | \
+	  datamash -g 1 first 3 min 2 max 2 --output-delimiter="@"| sort -k1,1) > $i-tmp-pivothead
+	  
+	  
+	  
+    
+    datamash --filler=x crosstab 12,6 first 11 < $i-tmp-pivot | sed '1s/^/grouped/' | sed 's/"//g' > $i-tmp-tmp && mv $i-tmp-tmp $i-tmp-pivot
+    
+    cp $i-tmp-pivot qqqmash.csv
     
     
-    datamash --header-in --filler=x crosstab 12,6 first 11 < $i-tmp-pivot | sed 's/"//g' | sed '1s/^/grouped/' \
-    > $i-tmp-tmp  2>/dev/null && mv $i-tmp-tmp $i-tmp-pivot 
+    paste $i-tmp-pivothead $i-tmp-pivot > $i-tmp-tmp && mv $i-tmp-tmp $i-tmp-pivot
+	  
+	  
+	  
+	  cut -f -1,3- $i-tmp-pivot > $i-tmp-tmp && mv $i-tmp-tmp $i-tmp-pivot
+	 
+	  
+    sed -i 's/_1-F3/-F3/g' $i-tmp-pivot
+    sed -i 's/_2-F2/-F2/g' $i-tmp-pivot
+    sed -i 's/_3-LF/-LF/g' $i-tmp-pivot
+    sed -i 's/_4-F1/-F1/g' $i-tmp-pivot
+    sed -i 's/_5-B1/-B1/g' $i-tmp-pivot
+    sed -i 's/_6-LB/-LB/g' $i-tmp-pivot
+    sed -i 's/_7-B2/-B2/g' $i-tmp-pivot
+    sed -i 's/_8-B3/-B3/g' $i-tmp-pivot
+    
+    #awk -F'\t' 'BEGIN {OFS = FS} {$1 = $1"\t"$2";"$3; print;}' $i-tmp-pivot > $i-tmp-tmp && mv $i-tmp-tmp $i-tmp-pivot 
+    
+    
+    
+
     
     
     grep ">" $j | sed -z 's/\n/\t/g' | sed 's/>//g' > $i-tmp-head
@@ -565,8 +585,12 @@ seqkit -j $ncpus split step1/primersets.fna -i --id-regexp "^(.*[\w]+)\-" \
     rm $i-tmp-seq
     
     cat $i-tmp-head | sed 's/\t/\n/g' > $i-tmp-expec
+    
+
     head -n 1 $i-tmp-pivot | sed 's/\t/\n/g' > $i-tmp-found
     rm $i-tmp-head
+    
+    grep -f $i-tmp-found $i-tmp-expec -v
     
     names=`grep -f $i-tmp-found $i-tmp-expec -v`
     
@@ -648,27 +672,36 @@ seqkit -j $ncpus split step1/primersets.fna -i --id-regexp "^(.*[\w]+)\-" \
     cat $i-tmp-pivot | \
     { sed -u 2q; sort -k2,2 -k3,3 -k4,4 -k5,5 -k6,6 -k7,7 -k8,8 -r; } \
     > $i-tmp-tmp && mv $i-tmp-tmp $i-tmp-pivot
+
+	
+
+
     
     
+		
+
     sed '1d' $i-tmp-pivot | \
     sed 's/^/>/g' | \
     sed 's/\t/\n/1' | \
     sed 's/\t/NN/g' > $i-tmp-fna
     
+    sed 's/:/@@/2' $i-tmp-fna | sed 's/:.*@@/@/' > $i-tmp-tmp && mv $i-tmp-tmp $i-tmp-fna
+    
     (
     #cat $i-tmp-fna | \
     #pv -l -s $(wc -l < $i-tmp-fna) | \
     #tee >(
-
+    
+    
     mview $i-tmp-fna \
     -in fasta -sort cov:pid -gap "-" -minident 30 \
     -out fasta | seqkit seq -j 1 -w 999 > LampAid/$npt.fasta #2>/dev/null
 	#)
 	
 	head1=`head $i-tmp-actual -n 1 | sed 's/primerset\t//g' |sed -z 's/\t/\n/g' | \
-	sed 's/.*-set/set/g' | sed '1i\>References\nCov\nPid'`
+	sed 's/.*-set/set/g' | sed '1i\>Ref\nRef\nFirst\nStt\nEnd\nCov\nPid'`
 	
-	head2=`head -n 2 LampAid/$npt.fasta | sed -z 's/ /\n/g' | sed 's/NN/\n/g'`
+	head2=`head -n 2 LampAid/$npt.fasta | sed 's/>actual/Acc\nDesc\nPrimer\nPos\nPos/g' |sed -z 's/ /\n/g' | sed 's/NN/\n/g'`
 	
 	paste <(echo "$head1") <(echo "$head2") --delimiters '@' | sed -z 's/\n/@@/g' > $i-tmp-head3
 	
@@ -709,6 +742,7 @@ done
 
 wait
     sed 's/-|-/NN/g' LampAid/*.fasta -i
+    sed 's/@/_/g' LampAid/*.fasta -i
     printf "%100s" ""
     echo " "
     echo -e " Build outputs ready"
