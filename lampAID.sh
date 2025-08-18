@@ -352,7 +352,7 @@ lampAIDsplt
 
 htmlout() {
 
-  	sed 's/ /@/g' LampAid/$npt.fasta | sed 's/\t/\t/g' | \
+  sed 's/ /@/g' LampAid/$npt.fasta | \
 	awk -v OFS='' -F '' '/>/ {printf $0"@"; next} NR==2 {
 	
 	IGNORECASE = 1
@@ -383,40 +383,44 @@ htmlout() {
 	}' | sed 's/NN/@/g' | sed -z 's/\n\n/\n/g' > LampAid/$npt.html #| aha --black --title $npt > LampAid/$npt.html
      
 
-    
-    cat $i-tmp-head3 LampAid/$npt.html | sed -z "s|@@>|@@\n>|g" | \
-    sed -z "s|>actual|actual|1" | aha --black --title $npt > $i-tmp-tmp && mv $i-tmp-tmp LampAid/$npt.html
-    
-    sed '12d' LampAid/$npt.html -i
-    
-    sed "s|@@|</th><th>|g" LampAid/$npt.html -i   
-    sed '11s|@|\n|g' LampAid/$npt.html -i
-    sed "11s|&gt;|</tr><tr><th>|g" LampAid/$npt.html -i
-    
-    
 
     
+    cat $i-tmp-head3 LampAid/$npt.html | sed -z "s|@@>|@@\n>|g" | \
+    sed -z "s|>actual|>000@Actual@0@0@0|1" | aha --black --title $npt > $i-tmp-tmp && mv $i-tmp-tmp LampAid/$npt.html
     
+    
+    
+    #sed '12d' LampAid/$npt.html -i
+
+    
+    sed "11s|@@|</th><th>|g" LampAid/$npt.html -i
+    sed "12s|@|</th><th>|g" LampAid/$npt.html -i
+
+
+
+    #sed '11s|@|\n|g' LampAid/$npt.html -i
+    sed "11,12s|&gt;|</tr><tr><th>|g" LampAid/$npt.html -i
     
     sed "s|@|</td><td>|g" LampAid/$npt.html -i
     sed "s|&gt;|</tr><tr><td>|g" LampAid/$npt.html -i
-    sed -z "s|<pre>|<style>td {padding-left: 7px;padding-right: 7px;}\n</style><pre><table>\n$primernames|g" LampAid/$npt.html -i
+    
+    cp LampAid/$npt.html aaa.html
+    
+    #sed -z "s|<pre>|<style>td {padding-left: 7px;padding-right: 7px;}\n</style><pre><table>\n$primernames|g" LampAid/$npt.html -i
     sed -z "s|</pre>|</td></tr></table></pre>|g" LampAid/$npt.html -i
-    sed '11i\
-    table tr:nth-child(odd) td{background: black;}\
-    table tr:nth-child(even) td{background: #333;}' LampAid/$npt.html -i
     
-    sed "8i\<div class=\'cursor\'>\n<div class=\'vt\'></div>\n<div class=\'hl\'></div>\n\
-    </div><script>\nconst cursorVT = document.querySelector(\'.vt\')\nconst cursorHL = document.querySelector(\'.hl\')\ndocument.addEventListener(\'mousemove\', e => {\ncursorVT.setAttribute(\'style\', \`left: \${e.clientX}px;\`)\ncursorHL.setAttribute(\'style\', \`top: \${e.clientY}px;\`)\n})\n</script>" LampAid/$npt.html -i
-        
-    sed "22i\.cursor {position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 1; pointer-events: none;}" LampAid/$npt.html -i
     
-    sed "23i\.vt {position: absolute; top: 0; bottom: 0; width: 1px; background: cyan;}" LampAid/$npt.html -i
+    sed "11,12s|</tr>||" LampAid/$npt.html -i
+    sed -z "s|</th><th>\n|</th></tr>\n|" LampAid/$npt.html -i
+    sed "12s|\t||" LampAid/$npt.html -i
+    sed "13s|</tr>|</tr></thead>|" LampAid/$npt.html -i
     
-    sed "24i\.hl {position: absolute; height: 1px; left: 0; right: 0; background: cyan;}" LampAid/$npt.html -i
+    sed -i '1,9d' LampAid/$npt.html -i
     
-    sed '27i\th {background:#b6b6ba; color:black;position: sticky;top: 0px;\
-    border: 0px solid red;line-height:1; padding: 1px; margin:2px; font-size: 12px; font-family:monospace}' LampAid/$npt.html -i
+    cat david.ml LampAid/$npt.html > $i-tmp-tmp && mv $i-tmp-tmp LampAid/$npt.html
+    
+    sed -i "4s|^|<title>$npt</title>\n|" LampAid/$npt.html
+  
     } #make html
 
 tabout() {
@@ -699,12 +703,16 @@ seqkit -j $ncpus split step1/primersets.fna -i --id-regexp "^(.*[\w]+)\-" \
 	#)
 	
 	head1=`head $i-tmp-actual -n 1 | sed 's/primerset\t//g' |sed -z 's/\t/\n/g' | \
-	sed 's/.*-set/set/g' | sed '1i\>Ref\nRef\nFirst\nStt\nEnd\nCov\nPid'`
+	sed 's/.*-set/set/g' | sed '1i\>Acc\nDesc\nFirst\nStt\nEnd\nCov\nPid'`
 	
-	head2=`head -n 2 LampAid/$npt.fasta | sed 's/>actual/Acc\nDesc\nPrimer\nPos\nPos/g' |sed -z 's/ /\n/g' | sed 's/NN/\n/g'`
+	#head2=`head -n 2 LampAid/$npt.fasta | sed 's/>actual/Acc\nDesc\nPrimer\nPos\nPos/g' |sed -z 's/ /\n/g' | sed 's/NN/\n/g'`
 	
-	paste <(echo "$head1") <(echo "$head2") --delimiters '@' | sed -z 's/\n/@@/g' > $i-tmp-head3
-	
+	#paste <(echo "$head1") <(echo "$head2") --delimiters '@' | sed -z 's/\n/@@/g' > $i-tmp-head3
+  	
+  echo "$head1" | sed -z 's/\n/@@/g' > $i-tmp-head3
+  echo $head1
+  echo $head2
+  
 	#printf $primernames
 	
 	
