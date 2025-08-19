@@ -158,7 +158,7 @@ language: {
 
 
       // Center align text
-      { className: "dt-head-center", targets: [ 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14 ] },
+      { className: "dt-head-center", targets: [ '_all' ] },
       { className: "dt-body-center", targets: [ 2,3,4,5,6,7 ] },
       // Left align body text
       { className: "dt-body-left", targets: [ 0,1 ] },
