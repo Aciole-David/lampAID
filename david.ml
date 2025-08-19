@@ -45,6 +45,10 @@ thead th {background:#b6b6ba; color:black;text-align: center;min-width:1px;
     font-size: 10px; display:block !important;font-family:monospace
 }
 
+table.dataTable tbody th, table.dataTable tbody td {
+    padding: 3px 2px;
+}
+
 </style>
 
 
@@ -69,6 +73,10 @@ thead th {background:#b6b6ba; color:black;text-align: center;min-width:1px;
 let toolbar = document.createElement('div');
 toolbar.innerHTML = '<b>LampAID interactive table results</b>';
 
+
+let spacer = document.createElement('div');
+spacer.innerHTML = '<b>   </b>';
+
 $(document).ready( function () {        
 
         $('#myTable thead tr:eq(1)').clone(true).appendTo('#myTable thead');
@@ -89,21 +97,26 @@ $(document).ready( function () {
 let table = $('#myTable').DataTable({
 
 
-    buttons: [{
-    
-    extend: 'pdfHtml5',
-    text: 'Save current page',
+    buttons: [
+    {extend: 'print',text: 'Print',},
+    {extend: 'csv',text: 'Csv',},
+    {extend: 'copy',text: 'Copy',},
+    {extend: 'pdfHtml5',
+    text: 'PDF current page',
     orientation: 'landscape',
     
     pageSize: 'B0',
+    customize: function (doc) {        
+            doc.defaultStyle.fontSize = 10;
+            doc.defaultStyle.font = 'Roboto';},
     exportOptions: {
     modifier: {
     page: 'current',
-    },
+    }, //modifier
   
-    }
+    }, //export
     
-    }],
+    }], //buttons
 
 language: {
         searchBuilder: {
@@ -120,9 +133,9 @@ language: {
      
      top2:toolbar,
      top1:['paging','pageLength','info','search'],
-     topStart:['searchBuilder'],
-     topEnd:['buttons'],
-     
+
+     topStart: [spacer,'searchBuilder',spacer,],
+     topEnd: [spacer,'buttons',spacer,{buttons: ['colvis']},],
      },
 
       colReorder: true,

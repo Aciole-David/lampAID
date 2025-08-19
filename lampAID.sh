@@ -404,8 +404,7 @@ htmlout() {
     sed "s|@|</td><td>|g" LampAid/$npt.html -i
     sed "s|&gt;|</tr><tr><td>|g" LampAid/$npt.html -i
     
-    cp LampAid/$npt.html aaa.html
-    
+
     #sed -z "s|<pre>|<style>td {padding-left: 7px;padding-right: 7px;}\n</style><pre><table>\n$primernames|g" LampAid/$npt.html -i
     sed -z "s|</pre>|</td></tr></table></pre>|g" LampAid/$npt.html -i
     
@@ -425,7 +424,7 @@ htmlout() {
 
 tabout() {
   
-  	sed 's/ /@/g' LampAid/$npt.fasta | sed 's/\t/\t/g' | \
+  sed 's/ /@/g' LampAid/$npt.fasta | sed 's/\t/\t/g' | \
 	awk -v OFS='' -F '' '/>/ {printf $0"@"; next} NR==2 {
 	
 	IGNORECASE = 1
@@ -447,9 +446,15 @@ tabout() {
 
     
     }
-	}' | sed 's/NN/\t/g' | sed 's/@/\t/g' | sed -z 's/\n\n/\n/g' | sed '1s/\t.*%/\tFirst\tStt\tEnd\tCov\tPid/' > LampAid/$npt.tab #| aha --black --title $npt > LampAid/$npt.html
-      
-    } #make html
+	}' | sed 's/NN/\t/g' | sed 's/@/\t/g' | sed -z 's/\n\n/\n/g' | sed -z 's|>actual|\nactual.0\tActual\t0\t0\t|g' > LampAid/$npt.tab
+	
+	(echo "$head1" | sed -z 's/\n/\t/g' ; cat LampAid/$npt.tab) > $i-tmp-tmp && mv $i-tmp-tmp LampAid/$npt.tab
+	
+	sed -i 's/^>//g' LampAid/$npt.tab
+	
+	echo $head1
+	
+  } #make tab
 
 
 # buildmode
@@ -510,8 +515,7 @@ seqkit -j $ncpus split step1/primersets.fna -i --id-regexp "^(.*[\w]+)\-" \
     awk '{ print $0"\t"$10 - prev } { prev = $10 }' ${i}-tmp-pivot \
     > $i-tmp-tmp && mv $i-tmp-tmp $i-tmp-pivot
     
-    cp $i-tmp-pivot aaa.csv
-    
+
     awk -v mycounter=0 \
     'OFS="\t" {if (sqrt($13^2) < 200) $14=$1":"mycounter; else $14=$1":"++mycounter; print;}' \
     $i-tmp-pivot \
@@ -527,12 +531,10 @@ seqkit -j $ncpus split step1/primersets.fna -i --id-regexp "^(.*[\w]+)\-" \
     
 	  awk '{print $0":"$3":"$4}' $i-tmp-pivot > $i-tmp-tmp && mv $i-tmp-tmp $i-tmp-pivot
     
-    cp $i-tmp-pivot qqq.csv
-    
+
     #grep 'F3' $i-tmp-pivot | sed 's/\t/\t@/g' | head 
     	  
-	  cp $i-tmp-pivot qqq2.csv
-	  
+
 	  #awk -F'\t' 'BEGIN {OFS = FS} { if ($6 != "arsenal") $11 =  $8"@"$9"@"$10"@"$11; print $0}' $i-tmp-pivot > $i-tmp-tmp && mv $i-tmp-tmp $i-tmp-pivot
 
 	  sed -i 's/-F3/_1-F3/g' $i-tmp-pivot
@@ -544,8 +546,7 @@ seqkit -j $ncpus split step1/primersets.fna -i --id-regexp "^(.*[\w]+)\-" \
     sed -i 's/-B2/_7-B2/g' $i-tmp-pivot
     sed -i 's/-B3/_8-B3/g' $i-tmp-pivot
 
-	  cp $i-tmp-pivot qqq3.csv
-	  
+
 	  (printf "grouped\n"; cat $i-tmp-pivot | awk -F'\t' 'BEGIN {OFS=FS} {print $12,$9,"@",$6"\n"$12,$10,"@",$6}' | \
 	  sed 's/@.*-//g' | \
 	  datamash -g 1 first 3 min 2 max 2 --output-delimiter="@"| sort -k1,1) > $i-tmp-pivothead
@@ -555,8 +556,7 @@ seqkit -j $ncpus split step1/primersets.fna -i --id-regexp "^(.*[\w]+)\-" \
     
     datamash --filler=x crosstab 12,6 first 11 < $i-tmp-pivot | sed '1s/^/grouped/' | sed 's/"//g' > $i-tmp-tmp && mv $i-tmp-tmp $i-tmp-pivot
     
-    cp $i-tmp-pivot qqqmash.csv
-    
+
     
     paste $i-tmp-pivothead $i-tmp-pivot > $i-tmp-tmp && mv $i-tmp-tmp $i-tmp-pivot
 	  
