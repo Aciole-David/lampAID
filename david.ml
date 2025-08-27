@@ -20,15 +20,17 @@ td {padding-left: 0px;padding-right: 0px;font-size: 10px !important;}
 .vt {position: absolute; top: 0; bottom: 0; width: 2px; background: cyan;}
 
 thead th {background:#b6b6ba; color:black;text-align: center;min-width:1px;
-    border: 0px solid red;line-height:1; padding: 0px; margin:10px; font-size: 10px !important; font-family:monospace}
+    border: 0px solid red;line-height:1; padding-left: 11px!important; margin:10px; font-size: 10px !important; font-family:monospace}
 
-.dt-head-center {text-align: center;color: #222222;
+.dt-head-center {text-align: center;color: #222222;min-width: 70px;
     border: solid .3px black;}
 
 .dtfc-top-blocker{
         background-color: transparent !important;
 }
 
+input {
+    width: 100%;}
 
 .btn {
     font-size: 10px !important;font-family:monospace
