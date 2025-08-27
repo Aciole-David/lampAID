@@ -226,7 +226,7 @@ lampAIDsplt() {
     sed 's/:/\t/1' | \
     sed 's/:/\t/1' | \
     awk '{print $1"\t"$2"\t"$2":"$3"\t"$4"\t"$5"\t"$6"\t"$7"\t"$8"\t"$9"\t"$10"\t"$11}' | \
-    sed 's/seqID\tseqID\tseqID:patternName\t/feat\tgenus\tspecies\tmisc\tchr\tprimer\t/g' \
+    sed 's/seqID\tseqID\tseqID:patternname\t/feat\tgenus\tspecies\tmisc\tchr\tprimer\t/g' \
     > splitout/split.tab
     
     names=`awk 'NR > 1 {print $6}' splitout/split.tab | sed 's/\(.*\)-.*/\1/' | sort -u`
@@ -339,7 +339,7 @@ totall=`wc -l < step1/merged-refs-ready.fna`
 #-f step1/primersets.fna > step1/found.tab )
 
 echo " Searching primers"
-time ( cat step1/merged-refs-ready.fna | pv -N "   " -l -s $totall | seqkit locate -P -I -i -m $nmmt -j $ncpus \
+time ( cat step1/merged-refs-ready.fna | pv -N "   " -l -s $totall | seqkit locate -I -i -m $nmmt -j $ncpus \
 -f step1/primersets.fna > step1/found.tab ) #& spinner
 
 
@@ -380,11 +380,10 @@ htmlout() {
 
     
     }
-	}' | sed 's/NN/@/g' | sed -z 's/\n\n/\n/g' > LampAid/$npt.html #| aha --black --title $npt > LampAid/$npt.html
+	}' | sed 's/#NN#/@/g' | sed -z 's/\n\n/\n/g' > LampAid/$npt.html #| aha --black --title $npt > LampAid/$npt.html
      
 
 
-    
     cat $i-tmp-head3 LampAid/$npt.html | sed -z "s|@@>|@@\n>|g" | \
     sed -z "s|>actual|>000@Actual@0@0@0|1" | aha --black --title $npt > $i-tmp-tmp && mv $i-tmp-tmp LampAid/$npt.html
     
@@ -419,6 +418,8 @@ htmlout() {
     cat david.ml LampAid/$npt.html > $i-tmp-tmp && mv $i-tmp-tmp LampAid/$npt.html
     
     sed -i "4s|^|<title>$npt</title>\n|" LampAid/$npt.html
+    
+    
   
     } #make html
 
@@ -446,7 +447,7 @@ tabout() {
 
     
     }
-	}' | sed 's/NN/\t/g' | sed 's/@/\t/g' | sed -z 's/\n\n/\n/g' | sed -z 's|>actual|\nactual.0\tActual\t0\t0\t|g' > LampAid/$npt.tab
+	}' | sed 's/#NN#/\t/g' | sed 's/@/\t/g' | sed -z 's/\n\n/\n/g' | sed -z 's|>actual|\nactual.0\tActual\t0\t0\t|g' > LampAid/$npt.tab
 	
 	(echo "$head1" | sed -z 's/\n/\t/g' ; cat LampAid/$npt.tab) > $i-tmp-tmp && mv $i-tmp-tmp LampAid/$npt.tab
 	
@@ -455,6 +456,218 @@ tabout() {
 	echo $head1
 	
   } #make tab
+
+
+overlaps() {
+  
+  sed 's/ /@/g' LampAid/$npt.fasta | sed 's/\t/\t/g' | \
+  awk -v OFS='' -F '' '/>/ {printf $0"@"; next} NR==2 {
+	
+	IGNORECASE = 1
+	for (i = 1; i <= NF; i++)
+	
+	{ faheader[i] = $i}; print $0 "\t"; next }
+
+	{
+	{
+    
+    for (i = 1; i <= NF; i++)
+	    
+	{
+    if ($i == faheader[i] && $i != "N") 
+    {$i=$i }
+    }
+    printf $0 "\n"
+    print ""
+
+    
+    }
+	}' | sed 's/#NN#/\t/g' | sed 's/@/\t/g' | sed -z 's/\n\n/\n/g' | sed -z 's|>actual|\nactual.0\tActual\t0\t0\t|g' > LampAid/$npt.csv
+  
+  (echo "$head1" | sed -z 's/\n/\t/g' ; cat LampAid/$npt.csv) > $i-tmp-tmp && mv $i-tmp-tmp LampAid/$npt.csv
+  
+  sed -i 's/^>//g' LampAid/$npt.csv
+  
+  sed '2d' LampAid/$npt.csv -i
+  
+  cut -f 2-3,6-7 --complement LampAid/$npt.csv > $i-tmp-tmp && mv $i-tmp-tmp LampAid/$npt.csv
+
+  
+  echo $head1
+} #make overlaps
+
+primermaps() {
+
+date
+ls LampAid/$npt.csv
+
+(length=`wc -l < LampAid/$npt.csv`
+
+(awk 'NR==1 {printf "primers: \033[31m" $4 "\033[0m\t"}' LampAid/$npt.csv
+awk 'NR==1 {printf "\033[32m" $5 "\033[0m\t"}' LampAid/$npt.csv
+awk 'NR==1 {printf "\033[33m" $6 "\033[0m\t"}' LampAid/$npt.csv
+awk 'NR==1 {printf "\033[34m" $7 "\033[0m\t"}' LampAid/$npt.csv
+awk 'NR==1 {printf "\033[41m" $8 "\033[0m\t"}' LampAid/$npt.csv
+awk 'NR==1 {printf "\033[46m" $9 "\033[0m\t"}' LampAid/$npt.csv
+awk 'NR==1 {printf "\033[44m" $10 "\033[0m\t"}' LampAid/$npt.csv
+awk 'NR==1 {printf "\033[45m" $11 "\033[0m\t"}' LampAid/$npt.csv) | column -t -s ' '
+
+for i in `seq 2 $length`; do
+
+achr=`awk -v total=$i 'NR==total {printf $1}' LampAid/$npt.csv`
+astt=`awk -v total=$i 'NR==total {printf $2}' LampAid/$npt.csv`
+aend=`awk -v total=$i 'NR==total {printf $3}' LampAid/$npt.csv`
+
+seq1=`awk -v total=$i 'NR==total {print $4}' LampAid/$npt.csv`
+seq2=`awk -v total=$i 'NR==total {print $5}' LampAid/$npt.csv`
+seq3=`awk -v total=$i 'NR==total {print $6}' LampAid/$npt.csv`
+seq4=`awk -v total=$i 'NR==total {print $7}' LampAid/$npt.csv`
+seq5=`awk -v total=$i 'NR==total {print $8}' LampAid/$npt.csv`
+seq6=`awk -v total=$i 'NR==total {print $9}' LampAid/$npt.csv`
+seq7=`awk -v total=$i 'NR==total {print $10}' LampAid/$npt.csv`
+seq8=`awk -v total=$i 'NR==total {print $11}' LampAid/$npt.csv`
+
+
+
+echo ""
+
+
+f3p=$seq1
+f2p=$seq2
+lfp=`echo $seq3 | rev`
+f1p=`echo $seq4 | rev`
+b1p=$seq5
+lbp=$seq6
+b2p=`echo $seq7 | rev`
+b3p=`echo $seq8 | rev`
+
+
+f3pl=`echo $seq1 | rev`
+f2pl=`echo $seq2 | rev`
+lfpl=$seq3
+f1pl=$seq4
+b1pl=`echo $seq5 | rev`
+lbpl=`echo $seq6 | rev`
+b2pl=$seq7
+b3pl=$seq8
+
+showoverlap() {
+printf "$1" | awk -v n=16 \
+    -v m1="${f3p}" -v m2="${f2p}" -v m3="${lfp}" -v m4="${f1p}" \
+    -v m5="${b1p}" -v m6="${lbp}" -v m7="${b2p}" -v m8="${b3p}" \
+    -v m9="${f3pl}" -v m10="${f2pl}" -v m11="${lfpl}" -v m12="${f1pl}" \
+    -v m13="${b1pl}" -v m14="${lbpl}" -v m15="${b2pl}" -v m16="${b3pl}" '
+
+BEGIN {
+    COLORS[1] = "\033[31m"   # red
+    COLORS[2] = "\033[32m"   # green
+    COLORS[3] = "\033[33m"   # yellow
+    COLORS[4] = "\033[34m"   # blue
+    COLORS[5] = "\033[41m"   # magenta
+    COLORS[6] = "\033[46m"   # cyan
+    COLORS[7] = "\033[44m"   # light green
+    COLORS[8] = "\033[45m"   # light blue
+
+    COLORS[9]  = "\033[31m"  # red
+    COLORS[10] = "\033[32m"  # green
+    COLORS[11] = "\033[33m"  # yellow
+    COLORS[12] = "\033[34m"  # blue
+    COLORS[13] = "\033[41m"  # magenta
+    COLORS[14] = "\033[46m"  # cyan
+    COLORS[15] = "\033[44m"  # light green
+    COLORS[16] = "\033[45m"  # light blue
+
+
+    GREY = "\033[90m"        # grey for overlap
+    RESET = "\033[0m"
+
+    m[1] = m1; m[2] = m2; m[3] = m3; m[4] = m4
+    m[5] = m5; m[6] = m6; m[7] = m7; m[8] = m8
+    m[9] = m9; m[10] = m10; m[11] = m11; m[12] = m12
+    m[13] = m13; m[14] = m14; m[15] = m15; m[16] = m16
+  
+}
+{
+    str = $0
+    len = length(str)
+
+    # Initialize coverage array: coverage[i] will hold a list of substrings covering position i
+    for (i = 1; i <= len; i++) {
+        coverage[i] = ""
+    }
+
+    # Find all matches and record coverage
+    for (subidx = 1; subidx <= n; subidx++) {
+        sublen = length(m[subidx])
+        for (pos = 1; pos <= len - sublen + 1; pos++) {
+            if (substr(str, pos, sublen) == m[subidx]) {
+                for (k = pos; k < pos + sublen; k++) {
+                    # Append subidx to coverage[i], separate with commas
+                    if (coverage[k] == "") {
+                        coverage[k] = subidx
+                    } else {
+                        coverage[k] = coverage[k] "," subidx
+                    }
+                }
+            }
+        }
+    }
+
+    current_color = ""
+    for (i = 1; i <= len; i++) {
+        split(coverage[i], arr, ",")
+
+        count = 0
+        delete seen
+        for (x in arr) {
+            if (arr[x] != "") {
+                seen[arr[x]] = 1
+            }
+        }
+        for (v in seen) count++
+
+        if (count == 0) {
+            color = RESET
+        } else if (count == 1) {
+            # Use the only substring color
+            for (v in seen) {
+                color = COLORS[v]
+            }
+        } else {
+            # Overlap: use grey
+            color = GREY
+        }
+
+        if (color != current_color) {
+            printf "%s", color
+            current_color = color
+        }
+        printf "%s", substr(str, i, 1)
+    }
+    if (current_color != RESET) {
+        printf "%s", RESET
+    }
+    print ""
+}'
+
+};
+
+astt=`echo $(( $astt - 1 ))`
+printf "$achr\t$astt\t$aend\t$achr\t0\t+" > LampAid/$npt-tmpbed
+sense=`seqkit --quiet -j 1 subseq --bed LampAid/$npt-tmpbed step1/*refs.fna | seqkit seq -w 999 -l -t DNA -v`
+asense2=`seqkit --quiet -j 1 subseq --bed LampAid/$npt-tmpbed step1/*refs.fna | seqkit seq -w 999 -l -t DNA -v -p | grep -v ">"`
+
+showoverlap "$sense"
+showoverlap "$asense2"
+
+# 
+# showoverlap "$sense" > LampAid/$npt-map.html
+# showoverlap "$asense2" >> LampAid/$npt-map.html
+# 
+# aha --black LampAid/$npt-map.html > $i-tmp-tmp && mv $i-tmp-tmp LampAid/$npt-map.html
+echo ""; done) | aha --black --title "$npt" > LampAid/$npt-map.html;
+
+}
 
 
 # buildmode
@@ -682,12 +895,11 @@ seqkit -j $ncpus split step1/primersets.fna -i --id-regexp "^(.*[\w]+)\-" \
 
     
     
-		
 
     sed '1d' $i-tmp-pivot | \
     sed 's/^/>/g' | \
     sed 's/\t/\n/1' | \
-    sed 's/\t/NN/g' > $i-tmp-fna
+    sed 's/\t/#NN#/g' > $i-tmp-fna
     
     sed 's/:/@@/2' $i-tmp-fna | sed 's/:.*@@/@/' > $i-tmp-tmp && mv $i-tmp-tmp $i-tmp-fna
     
@@ -698,14 +910,16 @@ seqkit -j $ncpus split step1/primersets.fna -i --id-regexp "^(.*[\w]+)\-" \
     
     
     mview $i-tmp-fna \
-    -in fasta -sort cov:pid -gap "-" -minident 30 \
+    -in fasta -sort cov:pid -gap "-" -minident 40 \
     -out fasta | seqkit seq -j 1 -w 999 > LampAid/$npt.fasta #2>/dev/null
 	#)
+	
+	
 	
 	head1=`head $i-tmp-actual -n 1 | sed 's/primerset\t//g' |sed -z 's/\t/\n/g' | \
 	sed 's/.*-set/set/g' | sed '1i\>Acc\nDesc\nFirst\nStt\nEnd\nCov\nPid'`
 	
-	#head2=`head -n 2 LampAid/$npt.fasta | sed 's/>actual/Acc\nDesc\nPrimer\nPos\nPos/g' |sed -z 's/ /\n/g' | sed 's/NN/\n/g'`
+	#head2=`head -n 2 LampAid/$npt.fasta | sed 's/>actual/Acc\nDesc\nPrimer\nPos\nPos/g' |sed -z 's/ /\n/g' | sed 's/#NN#/\n/g'`
 	
 	#paste <(echo "$head1") <(echo "$head2") --delimiters '@' | sed -z 's/\n/@@/g' > $i-tmp-head3
   	
@@ -713,9 +927,11 @@ seqkit -j $ncpus split step1/primersets.fna -i --id-regexp "^(.*[\w]+)\-" \
   echo $head1
   echo $head2
   
+  
+  
 	#printf $primernames
-	
-	
+
+
 	#awk '{for(i=1;i<=NF;i++)cols[i]=(cols[i]==""?$i:cols[i]" "$i)}END{for(i=1;i<=length(cols);i++)print cols[i]}' actual.tab
 
 if [[ "$mode" == 'html-build' ]]; then
@@ -723,6 +939,8 @@ htmlout
 
 elif [[ "$mode" == 'tab-build' ]]; then
 tabout
+overlaps
+primermaps
 
 fi
 
@@ -735,7 +953,7 @@ fi
     #| column -t -s '@' -N $primernames > LampAid/$npt.html #| aha --black --title $npt > LampAid/$npt.html # & spinner
 	echo -ne "   Total "$count " of $varlen to process; " $(( (100-$count *100/$varlen) )) "% done; $npt;\r"
     
-    #sed 's/-|-/NN/g' $i-tmp-fna -i
+    #sed 's/-|-/#NN#/g' $i-tmp-fna -i
     
     )
     
@@ -749,7 +967,7 @@ fi
 done
 
 wait
-    sed 's/-|-/NN/g' LampAid/*.fasta -i
+    sed 's/-|-/#NN#/g' LampAid/*.fasta -i
     sed 's/@/_/g' LampAid/*.fasta -i
     printf "%100s" ""
     echo " "
