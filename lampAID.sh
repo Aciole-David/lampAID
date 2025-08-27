@@ -424,7 +424,7 @@ htmlout() {
     } #make html
 
 tabout() {
-  
+  cp LampAid/$npt.fasta $npt.faa
   sed 's/ /@/g' LampAid/$npt.fasta | sed 's/\t/\t/g' | \
 	awk -v OFS='' -F '' '/>/ {printf $0"@"; next} NR==2 {
 	
@@ -439,7 +439,7 @@ tabout() {
     for (i = 1; i <= NF; i++)
 	    
 	{
-    if ($i == faheader[i] && $i != "N") 
+    if ($i == faheader[i] && $i != "N" && $i != "#") 
     {$i="." }
     }
     printf $0 "\n"
@@ -447,13 +447,16 @@ tabout() {
 
     
     }
-	}' | sed 's/#NN#/\t/g' | sed 's/@/\t/g' | sed -z 's/\n\n/\n/g' | sed -z 's|>actual|\nactual.0\tActual\t0\t0\t|g' > LampAid/$npt.tab
+	}' | sed 's/#NN#/\t/g' | sed 's/@/\t/g' | sed -z 's/\n\n/\n/g' | sed -z 's|>actual|\nactual.0\tActual\t0\t0\t0|g' > LampAid/$npt.tab
+	
+	cat LampAid/$npt.tab > $npt.tab
+	
 	
 	(echo "$head1" | sed -z 's/\n/\t/g' ; cat LampAid/$npt.tab) > $i-tmp-tmp && mv $i-tmp-tmp LampAid/$npt.tab
 	
 	sed -i 's/^>//g' LampAid/$npt.tab
 	
-	echo $head1
+	#echo $head1
 	
   } #make tab
 
@@ -474,8 +477,8 @@ overlaps() {
     for (i = 1; i <= NF; i++)
 	    
 	{
-    if ($i == faheader[i] && $i != "N") 
-    {$i=$i }
+    if ($i != faheader[i] && $i != "N") 
+    {$i=toupper($i) }
     }
     printf $0 "\n"
     print ""
@@ -493,13 +496,13 @@ overlaps() {
   cut -f 2-3,6-7 --complement LampAid/$npt.csv > $i-tmp-tmp && mv $i-tmp-tmp LampAid/$npt.csv
 
   
-  echo $head1
+  #echo $head1
 } #make overlaps
 
 primermaps() {
 
-date
-ls LampAid/$npt.csv
+#date
+#ls LampAid/$npt.csv
 
 (length=`wc -l < LampAid/$npt.csv`
 
@@ -558,7 +561,7 @@ printf "$1" | awk -v n=16 \
     -v m9="${f3pl}" -v m10="${f2pl}" -v m11="${lfpl}" -v m12="${f1pl}" \
     -v m13="${b1pl}" -v m14="${lbpl}" -v m15="${b2pl}" -v m16="${b3pl}" '
 
-BEGIN {
+BEGIN {IGNORECASE = 1;
     COLORS[1] = "\033[31m"   # red
     COLORS[2] = "\033[32m"   # green
     COLORS[3] = "\033[33m"   # yellow
@@ -652,10 +655,49 @@ BEGIN {
 
 };
 
+
+f3pp=`echo "${f3p,,}"`; f2pp=`echo "${f2p,,}"`; f1pp=`echo "${f1p,,}"`; b3pp=`echo "${b3p,,}"`
+b2pp=`echo "${b2p,,}"`; b1pp=`echo "${b1p,,}"`; lfpp=`echo "${lfp,,}"`; lbpp=`echo "${lbp,,}"`
+
+f3plp=`echo "${f3pl,,}"`; f2plp=`echo "${f2pl,,}"`; f1plp=`echo "${f1pl,,}"`; b3plp=`echo "${b3pl,,}"`
+b2plp=`echo "${b2pl,,}"`; b1plp=`echo "${b1pl,,}"`; lfplp=`echo "${lfpl,,}"`; lbplp=`echo "${lbpl,,}"`
+
+
+
+
 astt=`echo $(( $astt - 1 ))`
 printf "$achr\t$astt\t$aend\t$achr\t0\t+" > LampAid/$npt-tmpbed
-sense=`seqkit --quiet -j 1 subseq --bed LampAid/$npt-tmpbed step1/*refs.fna | seqkit seq -w 999 -l -t DNA -v`
-asense2=`seqkit --quiet -j 1 subseq --bed LampAid/$npt-tmpbed step1/*refs.fna | seqkit seq -w 999 -l -t DNA -v -p | grep -v ">"`
+
+# f3p=`echo "$f3p" | sed 's/[[:upper:]]/|&/g'`
+# f2p=`echo "$f2p" | sed 's/[[:upper:]]/|&/g'`
+# f1p=`echo "$f1p" | sed 's/[[:upper:]]/|&/g'`
+# b3p=`echo "$b3p" | sed 's/[[:upper:]]/|&/g'`
+# b2p=`echo "$b2p" | sed 's/[[:upper:]]/|&/g'`
+# b1p=`echo "$b1p" | sed 's/[[:upper:]]/|&/g'`
+# lfp=`echo "$lfp" | sed 's/[[:upper:]]/|&/g'`
+# lbp=`echo "$lbp" | sed 's/[[:upper:]]/|&/g'`
+# 
+# f3pl=`echo "$f3pl" | sed 's/[[:upper:]]/|&/g'`
+# f2pl=`echo "$f2pl" | sed 's/[[:upper:]]/|&/g'`
+# f1pl=`echo "$f1pl" | sed 's/[[:upper:]]/|&/g'`
+# b3pl=`echo "$b3pl" | sed 's/[[:upper:]]/|&/g'`
+# b2pl=`echo "$b2pl" | sed 's/[[:upper:]]/|&/g'`
+# b1pl=`echo "$b1pl" | sed 's/[[:upper:]]/|&/g'`
+# lfpl=`echo "$lfpl" | sed 's/[[:upper:]]/|&/g'`
+# lbpl=`echo "$lbpl" | sed 's/[[:upper:]]/|&/g'`
+
+sense=`seqkit --quiet -j 1 subseq --bed LampAid/$npt-tmpbed step1/*refs.fna | seqkit seq -w 999 -l -t DNA -v | \
+sed \
+-e "s/$f3pp/$f3p/g" -e "s/$f2pp/$f2p/g" -e "s/$f1pp/$f1p/g" -e "s/$lfpp/$lfp/g" \
+-e "s/$b3pp/$b3p/g" -e "s/$b2pp/$b2p/g" -e "s/$b1pp/$b1p/g" -e "s/$lbpp/$lbp/g"`
+
+asense2=`seqkit --quiet -j 1 subseq --bed LampAid/$npt-tmpbed step1/*refs.fna | seqkit seq -w 999 -l -t DNA -v -p | grep -v ">" | \
+sed \
+-e "s/$f3pp/$f3p/g" -e "s/$f2pp/$f2p/g" -e "s/$f1pp/$f1p/g" -e "s/$lfpp/$lfp/g" \
+-e "s/$b3pp/$b3p/g" -e "s/$b2pp/$b2p/g" -e "s/$b1pp/$b1p/g" -e "s/$lbpp/$lbp/g"`
+
+
+
 
 showoverlap "$sense"
 showoverlap "$asense2"
@@ -667,8 +709,10 @@ showoverlap "$asense2"
 # aha --black LampAid/$npt-map.html > $i-tmp-tmp && mv $i-tmp-tmp LampAid/$npt-map.html
 echo ""; done) | aha --black --title "$npt" > LampAid/$npt-map.html;
 
-}
+rm LampAid/$npt-tmpbed
+#rm LampAid/$npt.csv
 
+} #primermaps
 
 # buildmode
 buildmode() {
@@ -693,8 +737,7 @@ seqkit -j $ncpus split step1/primersets.fna -i --id-regexp "^(.*[\w]+)\-" \
     
     
     npts=`basename -a -s .split $(ls -Sr splitout/*.split)`
-    echo -e "splitfiles
-    $npts"
+    #echo -e "\nsplitfiles\n$npts"
     
     varlen=$(wc -w <<< "$npts")
     
@@ -702,7 +745,7 @@ seqkit -j $ncpus split step1/primersets.fna -i --id-regexp "^(.*[\w]+)\-" \
     
     echo ' Start building '
     
-    echo "will use $ncpus cpus"
+    #echo "will use $ncpus cpus"
     
     
     time (
@@ -924,8 +967,8 @@ seqkit -j $ncpus split step1/primersets.fna -i --id-regexp "^(.*[\w]+)\-" \
 	#paste <(echo "$head1") <(echo "$head2") --delimiters '@' | sed -z 's/\n/@@/g' > $i-tmp-head3
   	
   echo "$head1" | sed -z 's/\n/@@/g' > $i-tmp-head3
-  echo $head1
-  echo $head2
+  #echo $head1
+  #echo $head2
   
   
   
